@@ -6,6 +6,7 @@ multi-step commands. Complex requests can still be planned by the local LLM.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import re
 
 from brain.local_brain import LocalBrain
@@ -39,6 +40,39 @@ class Planner:
         ]
         return Plan(text, steps)
 
+    def plan_actions(self, request: str, context: str = "") -> list[ActionStep]:
+        system = (
+            "Return only JSON in the form {\\"actions\\":[{\\"action\\":\\"open_app\\",\\"argument\\":\\"chrome\\"}]}. "
+            "Allowed actions: open_app, close_app, open_file, read_file, type_text, press_key, "
+            "click, scroll, calculate, web_search, browser_read, project_learn. "
+            "Never invent an action. Return an empty actions list when tools are unnecessary."
+        )
+        try:
+            raw = self.brain.chat([
+                {"role": "system", "content": system},
+                {"role": "user", "content": "Request: " + request + "\\nContext: " + context},
+            ], temperature=0.0, max_tokens=500).strip()
+            raw = raw.replace("```json", "").replace("```", "").strip()
+            data = json.loads(raw)
+        except (LocalBrainError, json.JSONDecodeError):
+            return []
+        if not isinstance(data, dict):
+            return []
+        actions = data.get("actions", [])
+        if not isinstance(actions, list) or len(actions) > 8:
+            return []
+        allowed = {"open_app", "close_app", "open_file", "read_file", "type_text", "press_key",
+                   "click", "scroll", "calculate", "web_search", "browser_read", "project_learn"}
+        result = []
+        for item in actions:
+            if not isinstance(item, dict):
+                return []
+            action = item.get("action")
+            argument = item.get("argument", "")
+            if action not in allowed or not isinstance(argument, str):
+                return []
+            result.append(ActionStep(action, argument.strip()))
+        return result
     @staticmethod
     def deterministic_steps(request: str) -> list[ActionStep]:
         """Parse only unambiguous, safe multi-step commands."""
