@@ -42,7 +42,7 @@ class Planner:
 
     def plan_actions(self, request: str, context: str = "") -> list[ActionStep]:
         system = (
-            Return only JSON in the form {"actions":[{"action":"open_app","argument":"chrome"}]}. 
+            'Return only JSON in the form {"actions":[{"action":"open_app","argument":"chrome"}]}. '
             "Allowed actions: open_app, close_app, open_file, read_file, type_text, press_key, "
             "click, scroll, calculate, web_search, browser_read, project_learn. "
             "Never invent an action. Return an empty actions list when tools are unnecessary."
