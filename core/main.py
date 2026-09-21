@@ -1,6 +1,6 @@
 """Runnable local-first Jarvis command loop."""
 from __future__ import annotations
-import ast, operator, os, shlex
+import ast, operator, os, shlex\nfrom dotenv import load_dotenv\n\nload_dotenv()
 
 from brain.local_brain import LocalBrain, LocalBrainError
 from browser.chrome import search as browser_search
