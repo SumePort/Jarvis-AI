@@ -6,6 +6,7 @@ PyAutoGUI>=0.9.54,<1
 PyGetWindow>=0.0.9,<1
 pywin32>=311,<312
 pyperclip>=1.9,<2
+pytest>=8,<9
 
 # Optional local voice / OCR
 # sounddevice
