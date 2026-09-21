@@ -1,0 +1,85 @@
+"""Local microphone speech recognition using Vosk + sounddevice."""
+from __future__ import annotations
+
+import json
+import os
+import time
+
+
+class SpeechRecognizer:
+    def __init__(self, model_path: str | None = None, sample_rate: int = 16000):
+        try:
+            import sounddevice as sd
+            from vosk import KaldiRecognizer, Model
+        except ImportError as exc:
+            raise RuntimeError("Install sounddevice and vosk for voice mode.") from exc
+
+        self.sd = sd
+        self.KaldiRecognizer = KaldiRecognizer
+        self.model_path = model_path or os.getenv(
+            "VOSK_MODEL_PATH", "models/vosk-model-small-en-us-0.15"
+        )
+        self.sample_rate = sample_rate
+        self.model = Model(self.model_path)
+
+    @staticmethod
+    def _device():
+        value = os.getenv("JARVIS_MIC_DEVICE", "").strip()
+        if not value:
+            return None
+        try:
+            return int(value)
+        except ValueError:
+            return value
+
+    def listen(self, timeout: float = 8.0, silence_after_speech: float = 1.15) -> str:
+        recognizer = self.KaldiRecognizer(self.model, self.sample_rate)
+        recognizer.SetWords(True)
+        started_at = time.monotonic()
+        last_partial_at = started_at
+        heard_speech = False
+
+        def callback(indata, frames, time_info, status):
+            if status:
+                print(f"[MIC] {status}", flush=True)
+            recognizer.AcceptWaveform(bytes(indata))
+
+        with self.sd.RawInputStream(
+            samplerate=self.sample_rate,
+            blocksize=4000,
+            dtype="int16",
+            channels=1,
+            device=self._device(),
+            callback=callback,
+        ):
+            while time.monotonic() - started_at < timeout:
+                time.sleep(0.08)
+                partial = json.loads(recognizer.PartialResult()).get("partial", "").strip()
+                if partial:
+                    heard_speech = True
+                    last_partial_at = time.monotonic()
+                if heard_speech and time.monotonic() - last_partial_at >= silence_after_speech:
+                    break
+
+        final = json.loads(recognizer.FinalResult()).get("text", "").strip()
+        return final
+
+
+def transcribe_file(wav_path: str, model_path: str) -> str:
+    try:
+        import wave
+        from vosk import Model, KaldiRecognizer
+    except ImportError as exc:
+        raise RuntimeError("Install vosk to enable local speech recognition.") from exc
+
+    with wave.open(wav_path, "rb") as wf:
+        rec = KaldiRecognizer(Model(model_path), wf.getframerate())
+        parts = []
+        while True:
+            data = wf.readframes(4000)
+            if not data:
+                break
+            if rec.AcceptWaveform(data):
+                parts.append(json.loads(rec.Result()).get("text", ""))
+        parts.append(json.loads(rec.FinalResult()).get("text", ""))
+    return " ".join(x for x in parts if x).strip()
