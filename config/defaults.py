@@ -1,0 +1,3 @@
+DEFAULT_LOCAL_LLM_URL="http://127.0.0.1:8080/v1"
+DEFAULT_LOCAL_LLM_MODEL="local-model"
+DEFAULT_MEMORY_DB="data/jarvis.db"
