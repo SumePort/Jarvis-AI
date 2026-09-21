@@ -8,7 +8,10 @@ pywin32>=311,<312
 pyperclip>=1.9,<2
 pytest>=8,<9
 
-# Optional local voice / OCR
+# LiveKit realtime voice
+livekit-agents[openai]~=1.5
+
+# Optional legacy local voice / OCR
 # sounddevice
 # vosk
 # pytesseract
