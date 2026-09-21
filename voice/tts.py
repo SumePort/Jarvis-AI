@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 import subprocess
 import tempfile
-import wave
 
 
 def speak(text: str) -> str:
@@ -17,27 +16,23 @@ def speak(text: str) -> str:
     if not exe or not model:
         return "Piper is not configured."
 
-    output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-    output.close()
+    fd, output = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
     try:
         subprocess.run(
-            [exe, "--model", model, "--output_file", output.name],
+            [exe, "--model", model, "--output_file", output],
             input=text,
             text=True,
             check=True,
             timeout=60,
         )
-        _play_wav(output.name)
+        import winsound
+        winsound.PlaySound(output, winsound.SND_FILENAME)
         return "Spoken."
-    except (subprocess.SubprocessError, OSError, ValueError) as exc:
+    except (subprocess.SubprocessError, OSError) as exc:
         return f"TTS error: {exc}"
     finally:
         try:
-            os.unlink(output.name)
+            os.unlink(output)
         except OSError:
             pass
-
-
-def _play_wav(path: str) -> None:
-    import winsound
-    winsound.PlaySound(path, winsound.SND_FILENAME)
