@@ -92,19 +92,48 @@ class Jarvis:
                     if page_text and not str(page_text).startswith(("Blocked:", "Error"))
                     else page_text
                 )
+            elif step.action == "open_file":
+                result = self.executor.run(
+                    "open_file", files.open_path, step.argument,
+                    description=f"Open local path: {step.argument}",
+                )
+            elif step.action == "read_file":
+                result = self.executor.run("read_file", files.read_file, step.argument)
+            elif step.action == "close_app":
+                result = self.executor.run(
+                    "close_app", apps.close_window, step.argument,
+                    description=f"Close window: {step.argument}",
+                )
             elif step.action == "type_text":
                 result = self.executor.run(
-                    "type_text",
-                    keyboard.type_text,
-                    step.argument,
+                    "type_text", keyboard.type_text, step.argument,
                     description="Type text into the active window",
                 )
             elif step.action == "press_key":
-                result = self.executor.run(
-                    "press_key",
-                    keyboard.press_key,
-                    step.argument,
-                )
+                result = self.executor.run("press_key", keyboard.press_key, step.argument)
+            elif step.action == "click":
+                try:
+                    x, y = [int(v.strip()) for v in step.argument.split(",", 1)]
+                    result = self.executor.run("click", mouse.click, x, y)
+                except (ValueError, TypeError):
+                    result = "Invalid click coordinates."
+            elif step.action == "scroll":
+                try:
+                    result = self.executor.run("scroll", mouse.scroll, int(step.argument))
+                except ValueError:
+                    result = "Invalid scroll amount."
+            elif step.action == "calculate":
+                try:
+                    result = str(safe_calculate(step.argument))
+                except (SyntaxError, ValueError, ZeroDivisionError):
+                    result = "I could not calculate that expression safely."
+            elif step.action == "project_learn":
+                if os.path.isdir(step.argument):
+                    snap = learn_project(step.argument, self.memory)
+                    self.state.current_project = snap.root
+                    result = f"Learned {snap.name}: {len(snap.files)} files, {len(snap.directories)} directories."
+                else:
+                    result = f"Project folder not found: {step.argument}"
             elif step.action == "summarize":
                 if not page_text:
                     result = "I could not read the browser page."
@@ -136,6 +165,13 @@ class Jarvis:
         plan = self.planner.deterministic_steps(q)
         if plan:
             return self._execute_plan(plan)
+
+        # For requests not covered by fixed patterns, ask the local model for
+        # a constrained JSON action plan. The model can choose tools, but every
+        # chosen action is still validated and executed through ToolExecutor.
+        ai_plan = self.planner.plan_actions(q, context="")
+        if ai_plan:
+            return self._execute_plan(ai_plan)
 
         app_match = re.match(
             r"^(?:please\s+)?(?:open|launch|start|run)\s+"
