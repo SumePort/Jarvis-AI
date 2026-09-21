@@ -21,7 +21,7 @@ ALLOWED_ACTIONS = {
     "open_app", "close_app", "open_file", "open_folder",
     "read_file", "search_local_files", "create_file", "modify_project",
     "run_tests", "run_local_program", "browser_navigate", "browser_read",
-    "web_search", "project_learn", "project_refresh", "calculate",
+    "web_search", "project_learn", "project_refresh", "calculate", "type_text", "press_key", "click", "scroll", "write_code", "run_command",
 }
 
 # ============================================================
