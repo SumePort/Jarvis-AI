@@ -2,18 +2,21 @@
 
 **Local-first personal AI computer agent for Windows.**
 
-Jarvis runs from the existing repository as a local system: a local LLM is the baseline brain, deterministic computer tools handle real actions, project memory learns local codebases, and Chrome provides an online path when internet access is available.
+Jarvis runs from the existing repository as a local system: a local LLM is the baseline brain, deterministic computer tools handle real actions, project memory learns local codebases, Chrome provides an online path, and LiveKit provides the realtime voice layer.
 
-## Final architecture
+## Architecture
 
 ```
-User
+User voice
   ↓
-Authentication
+LiveKit WebRTC + turn detection + interruptions
+  ↓
+STT
   ↓
 Jarvis Core
   ├── Router
   ├── Planner / Context
+  ├── Local Brain (llama-server)
   └── Tool Executor
         ↓
 Security Engine
@@ -21,67 +24,112 @@ Security Engine
   ├── CONFIRM
   └── RESTRICT
         ↓
-  ┌──────────────┬──────────────┬──────────────┬──────────────┐
-  Local Brain    Computer       Coding         Projects
-  Vision         Browser/Chrome Memory         Voice
+Computer / Coding / Vision / Browser / Projects / Memory
+        ↓
+Jarvis response
+  ↓
+LiveKit TTS
 ```
+
+LiveKit is the realtime voice transport/orchestration layer. It does not replace Jarvis Core. This keeps computer control, security, memory and local reasoning in the existing architecture.
 
 ## Core principles
 
-- No cloud AI API is required for the core.
+- No cloud LLM is required for the Jarvis brain.
 - The local model is accessed through an OpenAI-compatible `llama-server`.
-- Online requests open Chrome rather than requiring a Google/Gemini/OpenAI search API.
+- Online requests open Chrome rather than requiring a search API key.
 - Destructive or external actions require confirmation.
 - Restricted harmful/unauthorized categories are blocked centrally.
 - Password authentication is enabled by default.
 - Local conversation and project memory are stored in SQLite.
-- Old Gemini/LiveKit/LangChain runtime code has been removed from the active architecture.
+- LiveKit is used for realtime voice, turn detection and interruptions.
 
-## Hardware target
+## LiveKit voice setup
 
-The repository is designed to work on modest Windows hardware with a CPU-compatible quantized local model. For this machine, keep the local model small enough for available RAM.
+The LiveKit Agents framework supports realtime voice sessions with STT, LLM/TTS pipelines, turn detection and interruptions. The current implementation keeps the Jarvis brain local while using LiveKit for the voice layer.
 
-## Start Jarvis
+### 1. Install the LiveKit CLI
 
-### 1. Clone and enter the repository
+On Windows:
 
 ```powershell
-git clone https://github.com/SumePort/Jarvis-AI.git
-cd Jarvis-AI
-git checkout refactor/v1-local-first
+winget install LiveKit.LiveKitCLI
 ```
 
-### 2. Create the virtual environment
+### 2. Create/link a LiveKit project
+
+Create a LiveKit Cloud project, then authenticate the CLI:
 
 ```powershell
-py -3.14 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
+lk cloud auth
+```
+
+The LiveKit quickstart uses a free Cloud project for development and provides the project credentials needed by the agent. A self-hosted LiveKit server can also be used.
+
+### 3. Install Python dependencies
+
+From this repository:
+
+```powershell
+.\\.venv\\Scripts\\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 3. Configure local model
+### 4. Configure `.env`
 
-Copy `.env.example` to `.env`.
+Copy `.env.example` to `.env` and fill in:
 
-Start your OpenAI-compatible local `llama-server` on port 8080. For example, with the Qwen model already used during development:
-
-```powershell
-llama-server -m "E:\ULTRON\models\llm\qwen2.5-0.5b-instruct-q4_k_m.gguf" --host 127.0.0.1 --port 8080
+```text
+LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_API_KEY=...
+LIVEKIT_API_SECRET=...
 ```
 
-If your model/server is elsewhere, change `LOCAL_LLM_URL` and `LOCAL_LLM_MODEL` in `.env`.
+Keep the existing local model settings:
 
-### 4. Start Jarvis
+```text
+LOCAL_LLM_URL=http://127.0.0.1:8080/v1
+LOCAL_LLM_MODEL=local-model
+```
 
-Open a second PowerShell in the repository:
+### 5. Start the local brain
+
+For the Qwen model used during development:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
+llama-server -m "E:\\ULTRON\\models\\llm\\qwen2.5-0.5b-instruct-q4_k_m.gguf" --host 127.0.0.1 --port 8080
+```
+
+### 6. Start the LiveKit voice agent
+
+In a second PowerShell:
+
+```powershell
+.\\.venv\\Scripts\\Activate.ps1
+python -m voice.livekit_agent
+```
+
+For LiveKit development mode, the CLI can also run the agent:
+
+```powershell
+lk agent dev
+```
+
+Then open the LiveKit Agent Console and start a session with the `jarvis` agent.
+
+## Voice model choice
+
+The default STT is `deepgram/nova-3` and the default TTS is `inworld/inworld-tts-2` through LiveKit Inference. Change `LIVEKIT_STT_MODEL`, `LIVEKIT_TTS_MODEL`, and `LIVEKIT_TTS_VOICE` in `.env` to use other supported models.
+
+Important: LiveKit improves the realtime transport, endpointing/turn detection and interruption experience; transcription accuracy still depends heavily on the selected STT model.
+
+## Text mode
+
+The existing text interface remains available:
+
+```powershell
 python main.py
 ```
-
-On the first run Jarvis asks you to create a local password. Later runs ask for that password.
 
 ## First commands
 
@@ -97,21 +145,7 @@ On the first run Jarvis asks you to create a local password. Later runs ask for 
 /exit
 ```
 
-Natural language such as `Explain this project` is sent to the local brain.
-
-## Project learning
-
-Use:
-
-```text
-/learn E:\path\to\SumePort
-```
-
-Jarvis scans the project while ignoring Git, virtual environments, node_modules and generated build caches, then stores the project snapshot in local SQLite memory.
-
-## Online layer
-
-`/search <query>` opens Google in Chrome. This does not require a search API key. Browser navigation and interaction are separate modules so browser automation can grow without coupling it to the local brain.
+Natural-language commands are handled by Jarvis Core.
 
 ## Security
 
@@ -125,6 +159,6 @@ Unknown actions are restricted by default.
 
 The local password is a session gate. It is not a security boundary against someone who already has full access to the Windows account, repository, or disk.
 
-## Important
+## Branch
 
-The branch `refactor/v1-local-first` is the active refactor branch. `main` is kept separate until this branch is verified locally.
+`refactor/v1-local-first` is the active refactor branch. `main` remains separate until the branch is verified locally.
