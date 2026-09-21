@@ -44,7 +44,6 @@ class Planner:
         """Parse only unambiguous, safe multi-step commands."""
         q = request.strip()
 
-        # Open Chrome, search for X, and tell me what you find.
         match = re.match(
             r"^(?:please\s+)?open\s+(?:the\s+)?(?:app\s+)?"
             r"(chrome|google chrome|notepad|calculator|calc|paint)"
@@ -73,7 +72,6 @@ class Planner:
                 ActionStep("summarize"),
             ]
 
-        # Search for X and tell me what you find.
         match = re.match(
             r"^(?:please\s+)?search\s+(?:for\s+)?(.+?)"
             r"\s*(?:,?\s*(?:and\s+)?(?:tell|show|read|summarize)\s+"
@@ -89,7 +87,6 @@ class Planner:
                 ActionStep("summarize"),
             ]
 
-        # Open Notepad and type hello.
         match = re.match(
             r"^(?:please\s+)?open\s+(?:the\s+)?(?:app\s+)?"
             r"(notepad|calculator|calc|paint|chrome|google chrome)"
@@ -103,7 +100,6 @@ class Planner:
                 ActionStep("type_text", match.group(2).strip()),
             ]
 
-        # Open Notepad, type hello, then press enter.
         match = re.match(
             r"^(?:please\s+)?open\s+(?:the\s+)?(?:app\s+)?"
             r"(notepad|calculator|calc|paint|chrome|google chrome)"
