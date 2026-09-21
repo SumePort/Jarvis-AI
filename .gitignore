@@ -1,0 +1,23 @@
+@"
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+
+conversations/
+*.log
+
+.vscode/
+.idea/
+
+models/
+*.gguf
+*.onnx
+*.bin
+
+.DS_Store
+Thumbs.db
+"@ | Out-File -Encoding utf8 .gitignore
