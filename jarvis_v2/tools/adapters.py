@@ -39,8 +39,8 @@ class LocalAdapters:
 
 def create_default_registry() -> ToolRegistry:
     a=LocalAdapters(); r=ToolRegistry()
-    r.register(ToolSpec("open_app","Open a named application or document",ActionRisk.ALLOW), a.open_app)
-    r.register(ToolSpec("open_file","Open a local file",ActionRisk.ALLOW), a.open_file)
-    r.register(ToolSpec("read_file","Read a bounded local text file",ActionRisk.ALLOW), a.read_file)
-    r.register(ToolSpec("calculate","Evaluate a restricted arithmetic expression",ActionRisk.ALLOW), a.calculate)
+    r.register(ToolSpec("open_app","Open a named application or document",risk=ActionRisk.ALLOW), a.open_app)
+    r.register(ToolSpec("open_file","Open a local file",risk=ActionRisk.ALLOW), a.open_file)
+    r.register(ToolSpec("read_file","Read a bounded local text file",risk=ActionRisk.ALLOW), a.read_file)
+    r.register(ToolSpec("calculate","Evaluate a restricted arithmetic expression",risk=ActionRisk.ALLOW), a.calculate)
     return r
