@@ -14,6 +14,11 @@ class JsonBrainAdapter:
     def _prompt(self, request: str, context: dict[str, Any]) -> str:
         return json.dumps({"request":request,"context":context,"required_output":{"goal":"string","steps":[{"tool":"string","arguments":"object","risk":"allow|confirm|deny","reason":"string"}]}}, ensure_ascii=False)
 
+    def propose_actions(self, request: str, context: dict[str, Any], tools: list[Any]) -> ActionPlan:
+        tool_context = [{"name": t.name, "description": t.description, "risk": t.risk.value, "data_class": t.data_class.value} for t in tools]
+        context = {**context, "available_tools": tool_context}
+        return self.plan(request, context)
+
     def plan(self, request: str, context: dict[str, Any]) -> ActionPlan:
         raw=self.model_call(self._prompt(request, context))
         data=json.loads(raw)
