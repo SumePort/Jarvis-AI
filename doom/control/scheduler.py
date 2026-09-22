@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from doom.policy import DataClass
-from doom.workers import ResourcePolicyError, TaskRequest, Worker
+from doom.workers import ResourcePolicyError, TaskRequest, Worker, WorkerType
 from .registry import WorkerRegistry
 
 @dataclass(frozen=True, slots=True)
@@ -21,7 +21,7 @@ class Scheduler:
         if not candidates:
             raise ResourcePolicyError(f"No worker can satisfy capability: {task.required_capability}")
         if task.data_class == DataClass.PROTECTED and not task.explicitly_authorized:
-            candidates = [w for w in candidates if w.type == w.type.LOCAL]
+            candidates = [w for w in candidates if w.type == WorkerType.LOCAL]
             if not candidates:
                 raise ResourcePolicyError("Protected data is local-only by default.")
         worker: Worker = candidates[0]
