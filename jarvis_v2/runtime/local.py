@@ -35,6 +35,7 @@ from jarvis_v2.research.http_provider import HttpJsonResearchProvider
 from jarvis_v2.research.background import BackgroundResearchManager
 from jarvis_v2.research.browser_provider import BrowserResearchProvider
 from jarvis_v2.self_improvement.engine import SelfImprovementEngine
+from jarvis_v2.self_improvement.orchestrator import SelfImprovementOrchestrator
 from jarvis_v2.knowledge.learning_store import LearningStore
 
 
@@ -60,7 +61,13 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     brain = GatewayBrainFactory(gateway).create("local-llama")
 
     environment = JarvisEnvironment()
-    if os.getenv("JARVIS_ENABLE_OCR", "0") == "1" and vision.provider is not None:
+    vision = VisionService()
+    if os.getenv("JARVIS_ENABLE_OCR", "0") == "1":
+        try:
+            vision = VisionService(TesseractVisionProvider())
+        except Exception:
+            pass
+    if vision.provider is not None:
         try:
             environment._composite.providers.append(
                 ScreenshotEnvironmentProvider(WindowsScreenshotProvider(), vision)
@@ -83,17 +90,10 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     # Provider boundaries. Missing optional providers remain safe/unconfigured;
     # they are never represented as magically available capabilities.
     browser = BrowserRuntime()
-    vision = VisionService()
     research = ResearchPipeline()
 
     # Opt-in local providers. They are activated only when their dependencies
     # are installed and the corresponding environment flags are enabled.
-    if os.getenv("JARVIS_ENABLE_OCR", "0") == "1":
-        try:
-            vision = VisionService(TesseractVisionProvider())
-        except Exception:
-            pass
-
     if os.getenv("JARVIS_RESEARCH_ENDPOINT"):
         try:
             research = ResearchPipeline(
@@ -116,9 +116,21 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     coding = CodingAgent(SafeProjectExecutor())
     if browser.provider is not None and os.getenv("JARVIS_ENABLE_BROWSER_RESEARCH", "0") == "1":
         research = ResearchPipeline(BrowserResearchProvider(browser))
-    background_research = BackgroundResearchManager(research)
-    self_improvement = SelfImprovementEngine(os.getcwd(), SafeProjectExecutor())
     learning_store = LearningStore()
+    background_research = BackgroundResearchManager(
+        research,
+        summarizer=lambda result: brain.respond(
+            "Synthesize this research into a concise, evidence-grounded summary. "
+            "Do not invent facts. Preserve uncertainty and cite source URLs.\n"
+            + result.synthesis_context[:18000]
+        ),
+        learning_store=learning_store,
+    )
+    project_root = os.getenv("JARVIS_PROJECT_ROOT", os.getcwd())
+    self_improvement = SelfImprovementEngine(project_root, SafeProjectExecutor())
+    self_improvement_orchestrator = SelfImprovementOrchestrator(
+        self_improvement, brain=brain, research=research, learning_store=learning_store
+    )
 
     # Device identity/session layer used by DOOM.
     device_sessions = DeviceSessionManager()
@@ -148,6 +160,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "doom_sessions": doom_sessions,
         "coding": coding,
         "self_improvement": self_improvement,
+        "self_improvement_orchestrator": self_improvement_orchestrator,
         "learning_store": learning_store,
         "browser_session": browser_session,
         "capabilities": CapabilityStatusReporter().report(
