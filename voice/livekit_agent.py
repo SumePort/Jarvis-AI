@@ -17,6 +17,7 @@ from livekit import agents
 from livekit.agents import Agent, AgentServer, AgentSession, TurnHandlingOptions
 from livekit.agents import ChatContext, ChatMessage, inference
 from livekit.agents.llm import StopResponse
+from livekit.plugins import openai
 
 from jarvis_v2.personal.assistant import PersonalAssistant
 from jarvis_v2.runtime.local import build_local_runtime
@@ -114,7 +115,7 @@ async def jarvis_voice(ctx: agents.JobContext):
     runtime, _ = build_local_runtime(LOCAL_LLM_URL)
 
     # Authenticate the local assistant session for this trusted voice client.
-    assistant = PersonalAssistant(runtime.brain)
+    assistant = PersonalAssistant(runtime.services["brain"])
     assistant.authenticate(os.getenv("JARVIS_VOICE_USER_ID", "default"))
 
     session = AgentSession(
@@ -125,7 +126,11 @@ async def jarvis_voice(ctx: agents.JobContext):
         # The session LLM is intentionally not used to answer turns. It is
         # still provided because AgentSession expects an LLM in the pipeline;
         # JARVIS V2 generates the actual answer through on_user_turn_completed.
-        llm=inference.LLM(os.getenv("LIVEKIT_SESSION_LLM", "openai/gpt-4.1-mini")),
+        llm=openai.LLM(
+            model=LOCAL_LLM_MODEL,
+            base_url=LOCAL_LLM_URL,
+            api_key=os.getenv("LOCAL_LLM_API_KEY", "local"),
+        ),
         tts=inference.TTS(
             model=TTS_MODEL,
             voice=TTS_VOICE,
