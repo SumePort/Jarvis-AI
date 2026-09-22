@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
+from typing import Mapping
 import hashlib, json, time, uuid
 
 @dataclass(frozen=True)
@@ -30,12 +31,9 @@ class AuditLog:
 
     @classmethod
     def _sanitize(cls, value):
-        sensitive = {"password", "passwd", "secret", "pin", "upi_pin", "otp", "cvv",
-                     "token", "api_key", "private_key", "recovery_code", "credential",
-                     "security_answer"}
+        sensitive = {"password","passwd","secret","pin","upi_pin","otp","cvv","token","api_key","private_key","recovery_code","credential","security_answer"}
         if isinstance(value, Mapping):
-            return {k: ("[REDACTED]" if str(k).lower() in sensitive else cls._sanitize(v))
-                    for k, v in value.items()}
+            return {k: ("[REDACTED]" if str(k).lower() in sensitive else cls._sanitize(v)) for k, v in value.items()}
         if isinstance(value, (list, tuple)):
             return [cls._sanitize(v) for v in value]
         return value
@@ -43,7 +41,7 @@ class AuditLog:
     def append(self, event_type: str, identity: str | None=None, request: str | None=None, details: dict | None=None) -> AuditEvent:
         previous=self._last_hash()
         safe_request = request
-        if isinstance(request, str) and any(x in request.lower() for x in ("password=", "pin=", "otp=", "cvv=", "token=")):
+        if isinstance(request, str) and any(x in request.lower() for x in ("password=","pin=","otp=","cvv=","token=")):
             safe_request = "[REDACTED REQUEST]"
         safe_details = self._sanitize(details or {})
         base={"event_id":uuid.uuid4().hex,"event_type":event_type,"timestamp":time.time(),"identity":identity,"request":safe_request,"details":safe_details,"previous_hash":previous}
