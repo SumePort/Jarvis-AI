@@ -134,9 +134,9 @@ class ProjectIntelligence:
             except OSError:
                 continue
             if path.suffix == ".py":
-                symbols = re.findall(r"^(?:class|def|async def)\\s+([A-Za-z_]\\w*)", text, re.M)
+                symbols = re.findall(r"^(?:class|def|async def)\s+([A-Za-z_]\w*)", text, re.M)
             elif path.suffix in {".js", ".ts", ".tsx", ".jsx"}:
-                symbols = re.findall(r"^(?:export\\s+)?(?:async\\s+)?(?:function|class)\\s+([A-Za-z_]\\w*)", text, re.M)
+                symbols = re.findall(r"^(?:export\s+)?(?:async\s+)?(?:function|class)\s+([A-Za-z_]\w*)", text, re.M)
             else:
                 symbols = []
             if symbols:
