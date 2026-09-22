@@ -1,0 +1,8 @@
+name: doom_client
+description: Minimal authenticated DOOM mobile node
+publish_to: none
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
