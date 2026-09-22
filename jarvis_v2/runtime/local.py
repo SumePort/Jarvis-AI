@@ -262,6 +262,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "object_tracker": object_tracker,
         "physics_simulator": physics_simulator,
         "browser_session": browser_session,
+        "brain": brain,
         "capabilities": CapabilityStatusReporter().report(
             browser=browser.provider,
             vision=vision.provider,
