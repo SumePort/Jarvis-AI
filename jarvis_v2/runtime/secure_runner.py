@@ -2,10 +2,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from jarvis_v2.audit import AuditLog
-from jarvis_v2.audit import AuditLog
 from jarvis_v2.security import SecurityPolicy, IdentitySession
-from jarvis_v2.reasoning.context import ReasoningContextBuilder
-from jarvis_v2.actions.planner import ActionPlanner
+from jarvis_v2.actions.planner import ActionPlanner, ActionPlan, ActionPlannerBrain
 from jarvis_v2.loop.controller import AgentLoop
 from jarvis_v2.runtime.tracing import RuntimeTracer
 from jarvis_v2.core.types import ActionRisk, DataClass
@@ -18,15 +16,18 @@ class SecureRunResult:
     execution: object | None = None
 
 class SecureRunner:
-    def __init__(self, planner: ActionPlanner, loop: AgentLoop, security: SecurityPolicy | None=None,
-                 audit: AuditLog | None=None) -> None:
-        self.planner=planner
-        self.loop=loop
+    """Authoritative security gate around planning and closed-loop execution."""
+    def __init__(self, planner: ActionPlanner, loop: AgentLoop,
+                 brain: ActionPlannerBrain | None = None,
+                 security: SecurityPolicy | None = None,
+                 audit: AuditLog | None = None) -> None:
+        self.planner=planner; self.loop=loop; self.brain=brain
         self.security=security or SecurityPolicy()
         self.tracer=RuntimeTracer(audit or AuditLog())
 
     def run(self, session: IdentitySession, request: str, context: dict,
-            data_class: DataClass=DataClass.NORMAL, confirmed: bool=False) -> SecureRunResult:
+            data_class: DataClass=DataClass.NORMAL, confirmed: bool=False,
+            plan: ActionPlan | None=None) -> SecureRunResult:
         identity=session.identity
         self.tracer.request(identity, request)
         if not session.authenticated:
@@ -34,7 +35,12 @@ class SecureRunner:
             self.tracer.security(identity, request, d)
             return SecureRunResult(False, False, d.reason)
         try:
-            plan=self.planner.build(request, context)
+            if plan is None:
+                if self.brain is None:
+                    return SecureRunResult(False, False, "No action plan or planner brain supplied")
+                plan=self.planner.from_brain(self.brain, request, context)
+            else:
+                plan=self.planner.validate(plan)
             self.tracer.plan(identity, request, plan)
             if plan.blocked:
                 d=self.security.authorize(identity, data_class, ActionRisk.DENY, True, confirmed)
@@ -45,11 +51,10 @@ class SecureRunner:
             elif any(s.risk == ActionRisk.CONFIRM for s in plan.steps): highest=ActionRisk.CONFIRM
             d=self.security.authorize(identity, data_class, highest, True, confirmed)
             self.tracer.security(identity, request, d)
-            if not d.allowed:
-                return SecureRunResult(False, d.requires_confirmation, d.reason)
-            execution=self.loop.run(plan)
-            self.tracer.execution(identity, request, execution)
-            return SecureRunResult(True, False, "Execution completed", execution)
+            if not d.allowed: return SecureRunResult(False, d.requires_confirmation, d.reason)
+            execution=self.loop.run(plan, confirmed=confirmed)
+            self.tracer.execution(identity, request, execution.verification)
+            return SecureRunResult(execution.verification.success, False, execution.verification.message, execution)
         except Exception as exc:
             self.tracer.error(identity, request, exc)
             raise
