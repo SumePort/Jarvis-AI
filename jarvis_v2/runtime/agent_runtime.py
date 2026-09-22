@@ -11,6 +11,7 @@ from jarvis_v2.reasoning.action_reasoner import KnowledgeActionReasoner
 from jarvis_v2.environment.observer import EnvironmentObserver
 from jarvis_v2.loop.controller import Verification
 from jarvis_v2.loop.environment_loop import EnvironmentAgentLoop
+from jarvis_v2.runtime.high_impact_workflow import HighImpactWorkflow
 
 
 class _BrainReplanner:
@@ -39,7 +40,8 @@ class JarvisAgentRuntime:
     def __init__(self, planner: ActionPlanner, executor: ActionExecutor,
                  fabric: JarvisKnowledgeFabric, brain: ActionPlannerBrain | None = None,
                  environment_observer: EnvironmentObserver | None = None,
-                 max_iterations: int = 4):
+                 max_iterations: int = 4,
+                 high_impact_workflow: HighImpactWorkflow | None = None):
         self.planner = planner
         self.executor = executor
         self.fabric = fabric
@@ -47,6 +49,7 @@ class JarvisAgentRuntime:
         self.reasoner = KnowledgeActionReasoner(fabric, planner)
         self.environment_observer = environment_observer
         self.max_iterations = max(1, max_iterations)
+        self.high_impact_workflow = high_impact_workflow or HighImpactWorkflow()
 
     def run(self, request: str, *, plan: ActionPlan | None = None,
             confirmed: bool = False,
@@ -77,7 +80,8 @@ class JarvisAgentRuntime:
             return JarvisAgentResult(request, decision.relevant_nodes, decision.rationale, blocked=True,
                                      reason="Environment observer is required for agent execution")
         verifier = verifier or self._default_verifier
-        loop = EnvironmentAgentLoop(self.planner, self.executor, self.environment_observer, self.max_iterations)
+        loop = EnvironmentAgentLoop(self.planner, self.executor, self.environment_observer, self.max_iterations,
+                                    high_impact_workflow=self.high_impact_workflow)
         if replanner is None and self.brain is not None:
             replanner = _BrainReplanner(self.brain, self.planner)
         execution = loop.run(plan, verifier, replanner, confirmed)
