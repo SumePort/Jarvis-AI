@@ -1,6 +1,7 @@
 """End-to-end secure runtime path for JARVIS V2."""
 from __future__ import annotations
 from dataclasses import dataclass
+import inspect
 from jarvis_v2.audit import AuditLog
 from jarvis_v2.security import SecurityPolicy, IdentitySession
 from jarvis_v2.actions.planner import ActionPlanner, ActionPlan, ActionPlannerBrain
@@ -36,10 +37,13 @@ class SecureRunner:
             return SecureRunResult(False, False, d.reason)
         try:
             if plan is None:
-                if self.brain is None:
-                    return SecureRunResult(False, False, "No action plan or planner brain supplied")
-                plan=self.planner.from_brain(self.brain, request, context)
-            else:
+                if self.brain is not None:
+                    plan=self.planner.from_brain(self.brain, request, context)
+                elif hasattr(self.planner, "build"):
+                    plan=self.planner.build(request, context)
+                else:
+                    return SecureRunResult(False, False, "No action plan, planner build method, or planner brain supplied")
+            if hasattr(self.planner, "validate"):
                 plan=self.planner.validate(plan)
             self.tracer.plan(identity, request, plan)
             if plan.blocked:
@@ -52,7 +56,11 @@ class SecureRunner:
             d=self.security.authorize(identity, data_class, highest, True, confirmed)
             self.tracer.security(identity, request, d)
             if not d.allowed: return SecureRunResult(False, d.requires_confirmation, d.reason)
-            execution=self.loop.run(plan, confirmed=confirmed)
+            run_params = inspect.signature(self.loop.run).parameters
+            if "confirmed" in run_params:
+                execution=self.loop.run(plan, confirmed=confirmed)
+            else:
+                execution=self.loop.run(plan)
             self.tracer.execution(identity, request, execution.verification)
             return SecureRunResult(execution.verification.success, False, execution.verification.message, execution)
         except Exception as exc:
