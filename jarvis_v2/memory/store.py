@@ -24,7 +24,7 @@ class MemoryStore:
 
     def add(self, record: MemoryRecord) -> None:
         with self.path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(asdict(record), ensure_ascii=False) + "\\n")
+            f.write(json.dumps(asdict(record), ensure_ascii=False) + "\n")
 
     def all(self) -> list[MemoryRecord]:
         if not self.path.exists(): return []
