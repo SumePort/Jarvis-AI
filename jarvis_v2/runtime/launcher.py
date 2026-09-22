@@ -41,6 +41,8 @@ def main() -> None:
     print(f"runtime={'ready' if status.runtime_ready else 'offline'}")
     print(f"doom={'ready' if status.doom_ready else 'offline'}")
     print(f"voice={'ready' if status.voice_ready else 'disabled'}")
+    if not status.voice_ready and host.runtime.services.get("voice_error"):
+        print(f"voice_error={host.runtime.services['voice_error']}")
     if status.voice_ready:
         print("wake=Hey Jarvis")
         print("voice=local Vosk + Piper")
