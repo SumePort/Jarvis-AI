@@ -29,6 +29,8 @@ from jarvis_v2.code.safe_executor import SafeProjectExecutor
 from jarvis_v2.perception.tesseract import TesseractVisionProvider
 from jarvis_v2.environment.playwright_session import PlaywrightSessionFactory
 from jarvis_v2.environment.browser_playwright import PlaywrightBrowserProvider
+from jarvis_v2.environment.screenshot_provider import ScreenshotEnvironmentProvider
+from jarvis_v2.research.http_provider import HttpJsonResearchProvider
 
 
 def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntime, CapabilityRegistry]:
@@ -53,6 +55,13 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     brain = GatewayBrainFactory(gateway).create("local-llama")
 
     environment = JarvisEnvironment()
+    if os.getenv("JARVIS_ENABLE_OCR", "0") == "1" and vision.provider is not None:
+        try:
+            environment._composite.providers.append(
+                ScreenshotEnvironmentProvider(WindowsScreenshotProvider(), vision)
+            )
+        except Exception:
+            pass
     observer = EnvironmentObserver(environment.snapshot)
     fabric = JarvisKnowledgeFabric(UnifiedWorldGraph())
 
@@ -77,6 +86,14 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     if os.getenv("JARVIS_ENABLE_OCR", "0") == "1":
         try:
             vision = VisionService(TesseractVisionProvider())
+        except Exception:
+            pass
+
+    if os.getenv("JARVIS_RESEARCH_ENDPOINT"):
+        try:
+            research = ResearchPipeline(
+                HttpJsonResearchProvider(os.environ["JARVIS_RESEARCH_ENDPOINT"])
+            )
         except Exception:
             pass
 
