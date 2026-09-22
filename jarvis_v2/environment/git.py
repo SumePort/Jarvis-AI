@@ -32,8 +32,13 @@ class GitEnvironmentProvider:
         return result.stdout.strip()
 
     def _repo_root(self, path: Path) -> Path | None:
+        if not path.is_dir():
+            return None
         value = self._run(path, "rev-parse", "--show-toplevel")
-        return Path(value).resolve() if value else None
+        if not value:
+            return None
+        repo = Path(value).resolve()
+        return repo if repo == path.resolve() else None
 
     def _describe(self, repo: Path) -> dict:
         status = self._run(repo, "status", "--short")
