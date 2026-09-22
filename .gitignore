@@ -21,3 +21,7 @@ models/
 .DS_Store
 Thumbs.db
 "@ | Out-File -Encoding utf8 .gitignore
+# DOOM local runtime data
+data/
+data/doom/
+
