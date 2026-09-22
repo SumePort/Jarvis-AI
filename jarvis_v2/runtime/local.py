@@ -32,6 +32,7 @@ from jarvis_v2.environment.playwright_session import PlaywrightSessionFactory
 from jarvis_v2.environment.browser_playwright import PlaywrightBrowserProvider
 from jarvis_v2.environment.screenshot_provider import ScreenshotEnvironmentProvider
 from jarvis_v2.research.http_provider import HttpJsonResearchProvider
+from jarvis_v2.research.background import BackgroundResearchManager
 
 
 def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntime, CapabilityRegistry]:
@@ -110,6 +111,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
             browser_session = None
 
     coding = CodingAgent(SafeProjectExecutor())
+    background_research = BackgroundResearchManager(research)
 
     # Device identity/session layer used by DOOM.
     device_sessions = DeviceSessionManager()
@@ -134,6 +136,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "browser": browser,
         "vision": vision,
         "research": research,
+        "background_research": background_research,
         "device_sessions": device_sessions,
         "doom_sessions": doom_sessions,
         "coding": coding,
