@@ -24,5 +24,10 @@ class Scheduler:
             candidates = [w for w in candidates if w.type == WorkerType.LOCAL]
             if not candidates:
                 raise ResourcePolicyError("Protected data is local-only by default.")
-        worker: Worker = candidates[0]
+        if task.preferred_worker_type is not None:
+            preferred = [w for w in candidates if w.type == task.preferred_worker_type]
+            if preferred:
+                candidates = preferred
+        order = {WorkerType.LOCAL: 0, WorkerType.PRIVATE: 1, WorkerType.CLOUD: 2}
+        worker: Worker = sorted(candidates, key=lambda w: order[w.type])[0]
         return ScheduledTask(task.name, worker.id, task.data_class)
