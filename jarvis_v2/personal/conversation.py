@@ -11,6 +11,7 @@ from jarvis_v2.personal.memory import PersonalMemory
 from jarvis_v2.personal.memory_extractor import PersonalMemoryExtractor
 from jarvis_v2.personal.identity import IdentityDataPaths, IdentityStore
 from jarvis_v2.runtime.session import JarvisSession
+from jarvis_v2.language.policy import LanguagePolicy
 
 
 @dataclass
@@ -52,6 +53,7 @@ class JarvisConversation:
         self.memory = memory or PersonalMemory(self.personal.memory)
         self.extractor = PersonalMemoryExtractor(self.memory)
         self.turns: list[ConversationTurn] = []
+        self.language_policy = LanguagePolicy()
 
     def authenticate(self, identity_id: str = "default", credential: str | None = None) -> None:
         if identity_id == "default" and self.identity_store.get("default") is None:
@@ -108,6 +110,8 @@ class JarvisConversation:
         self.turns.append(user_turn)
         self.extractor.extract(text)
         context = self._context(text)
+        language = self.language_policy.choose(text)
+        context["language"] = {"code": language.language, "confidence": language.confidence, "instruction": self.language_policy.instruction(language)}
         response: BrainResponse = self.brain.respond(text, context, [])
         answer = response.text.strip()
         assistant_turn = ConversationTurn("assistant", answer, metadata=response.metadata)
