@@ -119,17 +119,22 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     learning_store = LearningStore()
     background_research = BackgroundResearchManager(
         research,
-        summarizer=lambda result: brain.respond(
-            "Synthesize this research into a concise, evidence-grounded summary. "
+        summarizer=lambda result: gateway.complete(
+            "local-llama",
+            "[JARVIS_RAW]\nSynthesize this research into a concise, evidence-grounded summary. "
             "Do not invent facts. Preserve uncertainty and cite source URLs.\n"
-            + result.synthesis_context[:18000]
+            + result.synthesis_context[:18000],
         ),
         learning_store=learning_store,
     )
     project_root = os.getenv("JARVIS_PROJECT_ROOT", os.getcwd())
     self_improvement = SelfImprovementEngine(project_root, SafeProjectExecutor())
     self_improvement_orchestrator = SelfImprovementOrchestrator(
-        self_improvement, brain=brain, research=research, learning_store=learning_store
+        self_improvement,
+        brain=brain,
+        text_model=lambda prompt: gateway.complete("local-llama", prompt),
+        research=research,
+        learning_store=learning_store,
     )
 
     # Device identity/session layer used by DOOM.
