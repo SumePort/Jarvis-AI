@@ -48,6 +48,6 @@ class DependencyAnalyzer:
             try: text=p.read_text(encoding="utf-8",errors="replace")
             except OSError: continue
             for i,line in enumerate(text.splitlines(),1):
-                for m in re.finditer(r"@(?:app|router)\.(get|post|put|patch|delete)\(\s*["']([^"']+)",line):
+                for m in re.finditer(r'''@(?:app|router)\.(get|post|put|patch|delete)\(\s*["']([^"']+)''',line):
                     model.routes.append(APIRoute(m.group(1).upper(),m.group(2),str(p),i,"FastAPI-like"))
         return model
