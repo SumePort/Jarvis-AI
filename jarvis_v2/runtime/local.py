@@ -27,6 +27,7 @@ from jarvis_v2.research.pipeline import ResearchPipeline
 from jarvis_v2.code.agent import CodingAgent
 from jarvis_v2.code.safe_executor import SafeProjectExecutor
 from jarvis_v2.perception.tesseract import TesseractVisionProvider
+from jarvis_v2.perception.screenshot import WindowsScreenshotProvider
 from jarvis_v2.environment.playwright_session import PlaywrightSessionFactory
 from jarvis_v2.environment.browser_playwright import PlaywrightBrowserProvider
 from jarvis_v2.environment.screenshot_provider import ScreenshotEnvironmentProvider
