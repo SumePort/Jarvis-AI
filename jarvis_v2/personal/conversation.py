@@ -47,6 +47,7 @@ class JarvisConversation:
         identity_store: IdentityStore | None = None,
     ):
         self.brain = brain
+        self._injected_personal_state = personal is not None or memory is not None
         self.session = session or JarvisSession(str(uuid.uuid4()), authenticated=False)
         self.identity_store = identity_store or IdentityStore()
         self.personal = personal or PersonalContext()
@@ -63,7 +64,8 @@ class JarvisConversation:
         self.session.authenticated = True
         self.session.identity_id = identity.identity_id
         self.session.identity_name = identity.name
-        self.bind_identity(identity.identity_id)
+        if not (identity_id == "default" and self._injected_personal_state):
+            self.bind_identity(identity.identity_id)
 
     def bind_identity(self, identity_id: str) -> None:
         paths = IdentityDataPaths(identity_id)
