@@ -27,3 +27,15 @@ This first implementation establishes the contracts that must not change later:
 data classification, the protected-vault boundary, and resource routing.
 Worker execution, distributed workspace storage, device clients, and JARVIS
 integration will build on these contracts.
+
+## Phase 2 — Control Plane
+
+The control plane coordinates DOOM devices and workers.
+
+DOOM Client -> Control Plane -> Worker Registry -> Scheduler -> Worker
+
+The initial server binds to 127.0.0.1:8787 by default. Device enrollment issues a device token; the control plane stores only a SHA-256 token hash. Remote exposure is deliberately not enabled yet. Secure transport and explicit device enrollment must be added before exposing the control plane to a LAN or the Internet.
+
+Run locally: python -m doom.control
+
+The current API supports health, device enrollment, worker registration, worker listing, and policy-aware task planning. It does not execute remote tasks yet.
