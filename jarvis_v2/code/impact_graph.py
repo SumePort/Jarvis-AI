@@ -127,14 +127,21 @@ class CrossLayerImpactBuilder:
         return re.findall(r"""(?:from|import)\s+["']([^"']+)["']""", text)
 
     def _resolve_import(self, source: Path, imported: str) -> str:
+        module_path = imported.lstrip(".").replace(".", "/")
         if imported.startswith("."):
-            base = (source.parent / imported.lstrip(".")).resolve()
-        elif source.suffix == ".py":
-            base = (self.root / imported.replace(".", "/")).resolve()
+            base = (source.parent / module_path).resolve()
         else:
-            base = (self.root / imported).resolve()
-        candidates = [base, Path(str(base) + ".py"), Path(str(base) + ".js"), Path(str(base) + ".ts"), Path(str(base) + ".tsx"),
-                      base / "__init__.py", base / "index.ts", base / "index.js"]
+            base = (self.root / module_path).resolve()
+        candidates = [
+            base,
+            base.with_suffix(".py"),
+            base.with_suffix(".js"),
+            base.with_suffix(".ts"),
+            base.with_suffix(".tsx"),
+            base / "__init__.py",
+            base / "index.ts",
+            base / "index.js",
+        ]
         for c in candidates:
             try:
                 return c.relative_to(self.root).as_posix() if c.is_file() else ""
