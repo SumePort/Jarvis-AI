@@ -2,4 +2,5 @@
 from .runtime import VoiceRuntime, VoiceTurn
 from .assistant import VoiceAssistant, VoiceAssistantResult
 from .live_agent import LiveVoiceAgent, LiveVoiceResult
-__all__ = ["VoiceRuntime", "VoiceTurn", "VoiceAssistant", "VoiceAssistantResult", "LiveVoiceAgent", "LiveVoiceResult"]
+from .local import LocalVoiceConfig, LocalWakeWordRuntime, build_local_voice
+__all__ = ["VoiceRuntime", "VoiceTurn", "VoiceAssistant", "VoiceAssistantResult", "LiveVoiceAgent", "LiveVoiceResult", "LocalVoiceConfig", "LocalWakeWordRuntime", "build_local_voice"]
