@@ -8,6 +8,7 @@ from jarvis_v2.core.types import ActionRisk, DataClass
 class AuthorizationDecision:
     allowed: bool
     requires_confirmation: bool = False
+    requires_user_input: bool = False
     reason: str = ""
 
 
@@ -20,13 +21,15 @@ class SecurityPolicy:
             return AuthorizationDecision(False, reason="Action is denied by policy")
 
         if data_class == DataClass.PROTECTED:
-            # Authentication alone is never sufficient for a protected secret.
             if not explicit_confirmation:
                 return AuthorizationDecision(
                     False, requires_confirmation=True,
                     reason="Protected data requires explicit confirmation",
                 )
-            return AuthorizationDecision(True, reason="Protected data authorized for this local operation")
+            return AuthorizationDecision(
+                True, requires_user_input=True,
+                reason="Protected operation requires user entry at the trusted UI",
+            )
 
         if risk == ActionRisk.CONFIRM and not explicit_confirmation:
             return AuthorizationDecision(False, requires_confirmation=True, reason="Explicit confirmation required")
