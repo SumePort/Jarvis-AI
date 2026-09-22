@@ -51,6 +51,9 @@ from jarvis_v2.simulation.physics import PhysicsSimulator
 from doom.provisioning.adapters import NoopProvisioner
 from doom.mesh.mesh import DoomMesh
 from doom.provisioning import Provisioner
+from jarvis_v2.personal.assistant import PersonalAssistant
+from jarvis_v2.voice.local import build_local_voice, LocalVoiceConfig
+from jarvis_v2.voice.live_agent import LiveVoiceAgent
 
 
 def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntime, CapabilityRegistry]:
@@ -177,6 +180,44 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     device_sessions = DeviceSessionManager()
     doom_sessions = DoomSessionBridge(device_sessions)
 
+    # Local voice is opt-in so importing/building the core runtime never
+    # requires microphone/audio dependencies. When enabled, Vosk and Piper
+    # remain local and feed the same authenticated PersonalAssistant used by
+    # the text runtime.
+    voice_agent = None
+    if os.getenv("JARVIS_ENABLE_VOICE", "0") == "1":
+        try:
+            voice = build_local_voice(
+                LocalVoiceConfig(
+                    model_path=os.getenv("VOSK_MODEL_PATH"),
+                    sample_rate=int(os.getenv("JARVIS_VOICE_SAMPLE_RATE", "16000")),
+                    wake_word=os.getenv("JARVIS_WAKE_WORD", "hey jarvis"),
+                    listen_timeout=float(os.getenv("JARVIS_VOICE_TIMEOUT", "8")),
+                    silence_after_speech=float(
+                        os.getenv("JARVIS_VOICE_SILENCE", "1.15")
+                    ),
+                )
+            )
+            personal_assistant = PersonalAssistant(brain)
+            user_id = os.getenv("JARVIS_VOICE_USER_ID", "default")
+            device_id = os.getenv("JARVIS_VOICE_DEVICE_ID", "local-pc")
+
+            def authenticate_voice():
+                # This callback deliberately returns identity metadata only.
+                # No password/PIN/OTP/secret is captured by the voice layer.
+                return user_id, device_id
+
+            voice_agent = LiveVoiceAgent(
+                assistant=personal_assistant,
+                voice=voice,
+                authenticate=authenticate_voice,
+                doom_sessions=doom_sessions,
+            )
+        except Exception:
+            # Voice is optional; the rest of JARVIS remains usable when audio
+            # dependencies, microphone, Vosk model, or Piper are unavailable.
+            voice_agent = None
+
     # Keep these objects attached to the runtime as explicit services. This
     # gives the host application one composition root without leaking secrets
     # into the model.
@@ -199,6 +240,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "background_research": background_research,
         "device_sessions": device_sessions,
         "doom_sessions": doom_sessions,
+        "voice_agent": voice_agent,
         "coding": coding,
         "self_improvement": self_improvement,
         "self_improvement_orchestrator": self_improvement_orchestrator,
