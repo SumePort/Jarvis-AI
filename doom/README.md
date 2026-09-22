@@ -31,7 +31,7 @@ enrollment must be added before exposing the control plane to a LAN or Internet.
 Run locally: python -m doom.control
 
 The current API supports health, device enrollment, worker registration, worker
-listing, and policy-aware task planning. It does not execute remote tasks yet.
+listing, heartbeats, and policy-aware task planning.
 
 ## Phase 3 — Distributed Workspace
 
@@ -40,21 +40,70 @@ Phase 3 adds persistent, provider-neutral project storage:
 DOOM Client -> Workspace Manifest -> Object Store
 
 A workspace manifest records each file by SHA-256 content address, size, path,
-and DOOM data classification. The object-store interface is provider-neutral,
-so local storage is only the first backend; future private servers, Oracle,
-S3-compatible storage, or other providers can implement the same contract.
+and DOOM data classification. NORMAL project files may be synchronized.
+PROTECTED files are rejected by the workspace sync layer and remain outside
+distributed storage.
 
-NORMAL project files may be synchronized. PROTECTED files are rejected by the
-workspace sync layer and remain outside distributed storage. The protected vault
-is a separate PC-local security boundary.
-
-### Initialize a workspace
+Initialize a workspace:
 
 python -m doom workspace init my-project data/doom/workspaces/my-project
 
-This creates:
+## Phase 4 — Cloud Workers
 
-data/doom/workspaces/my-project/.doom/manifest.json
+Phase 4 turns cloud/private machines into replaceable DOOM compute workers.
 
-Phase 3 does not expose storage to the Internet and does not yet implement
-multi-device conflict resolution. Those are later phases.
+Architecture:
+
+DOOM Control Plane
+       |
+       +-- Local PC worker
+       +-- Private server worker
+       +-- Cloud worker
+                 |
+                 +-- Oracle / AWS / GCP / other provider
+                 +-- provider-neutral DOOM worker service
+
+DOOM does not depend on any one cloud provider. A provider only supplies a
+machine/network endpoint; the DOOM worker protocol remains the same.
+
+### Worker protocol
+
+A remote worker exposes:
+
+- GET /health
+- POST /v1/execute
+
+The worker uses a bearer token and the control plane tracks worker endpoint,
+type, capabilities, region, and online state.
+
+Run the reference worker:
+
+DOOM_WORKER_TOKEN=<strong-random-token> python -m doom.cloud
+
+The reference Phase 4 worker intentionally refuses arbitrary command execution.
+Remote task executors will be added only for explicitly supported capabilities.
+
+### Routing
+
+A task can request a preferred worker type.
+
+Example:
+
+- normal CPU work -> local by default
+- authorized GPU work -> cloud can be preferred
+- persistent service -> private worker can be preferred
+- protected data -> local only unless explicitly authorized
+
+The scheduler also exposes worker health through heartbeat/offline endpoints.
+
+### Security boundary
+
+Phase 4 does NOT upload protected data automatically.
+
+Remote workers receive no DOOM vault keys. The control plane stores device
+token hashes, not raw device tokens. Cloud workers are untrusted compute
+resources unless they are explicitly designated as private/trusted by a future
+policy layer.
+
+Phase 4 establishes the hybrid compute protocol; it does not yet deploy
+provider-specific infrastructure or expose the control plane publicly.
