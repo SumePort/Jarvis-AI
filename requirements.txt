@@ -23,3 +23,7 @@ livekit-agents[openai]~=1.5
 
 # DOOM protected vault
 cryptography>=44,<46
+
+# DOOM control plane
+fastapi>=0.116,<1
+uvicorn>=0.35,<1
