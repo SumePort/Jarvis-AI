@@ -107,3 +107,19 @@ policy layer.
 
 Phase 4 establishes the hybrid compute protocol; it does not yet deploy
 provider-specific infrastructure or expose the control plane publicly.
+
+
+## Phase 5 — DOOM Client
+
+Phase 5 adds the first local device client. A Windows PC can enroll itself with the control plane, register its local resources as a worker, and send heartbeats.
+
+Run:
+
+python -m doom.client enroll --name "My-PC"
+python -m doom.client register
+python -m doom.client status
+python -m doom.client start
+
+The client configuration is stored locally in `data/doom/client.json` and contains the device credential. It must never be committed to Git or copied into the distributed workspace.
+
+A Windows launcher is provided at `scripts/doom-client-start.bat`. Phase 5 does not yet install a Windows service or expose the control plane publicly. Secure remote device connectivity comes before those steps.
