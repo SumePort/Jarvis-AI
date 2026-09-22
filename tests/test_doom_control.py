@@ -25,3 +25,12 @@ def test_scheduler_blocks_protected_data_when_only_remote_worker_exists():
     registry.register(Worker("cloud", WorkerType.CLOUD, {"gpu"}))
     with pytest.raises(ResourcePolicyError):
         Scheduler(registry).select(TaskRequest("secret", "gpu", DataClass.PROTECTED))
+
+def test_scheduler_can_prefer_cloud_for_authorized_normal_work():
+    registry = WorkerRegistry()
+    registry.register(Worker("pc", WorkerType.LOCAL, {"gpu"}))
+    registry.register(Worker("cloud-gpu", WorkerType.CLOUD, {"gpu"}, endpoint="https://worker.example"))
+    result = Scheduler(registry).select(
+        TaskRequest("model-job", "gpu", DataClass.NORMAL, preferred_worker_type=WorkerType.CLOUD)
+    )
+    assert result.worker_id == "cloud-gpu"
