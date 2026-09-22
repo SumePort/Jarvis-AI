@@ -52,7 +52,10 @@ class SessionContinuityStore:
     def load(self, identity_id: str, session_id: str) -> SessionSnapshot:
         path = self._path(identity_id, session_id)
         if not path.is_file():
-            raise FileNotFoundError("Session continuity snapshot not found")
+            candidates = list(self.root.glob(f"*/{session_id}.json"))
+            if not candidates:
+                raise FileNotFoundError("Session continuity snapshot not found")
+            path = candidates[0]
         snapshot = SessionSnapshot(**json.loads(path.read_text(encoding="utf-8")))
         supplied = snapshot.checksum
         payload = asdict(snapshot)
