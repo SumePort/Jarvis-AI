@@ -35,8 +35,7 @@ class DoomClient:
 
     def register_local_worker(self, worker_id: str = "local-pc", capabilities: set[str] | None = None) -> dict:
         payload = {
-            "id": worker_id,
-            "type": "local",
+            "id": worker_id, "type": "local",
             "capabilities": sorted(capabilities or {"cpu", "filesystem", "browser"}),
         }
         try:
@@ -70,3 +69,10 @@ class DoomClient:
             return {"device_id": self.config.device_id, "workers": response.json()}
         except (requests.RequestException, ValueError) as exc:
             raise DoomClientError(f"DOOM status failed: {exc}") from exc
+
+    def run_once(self) -> dict:
+        """Register the local worker and send one heartbeat."""
+        if not self.config.device_id or not self.config.token:
+            self.enroll()
+        self.register_local_worker()
+        return self.heartbeat()
