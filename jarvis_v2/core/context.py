@@ -23,7 +23,7 @@ class JarvisContext:
             "user_request": self.user_request,
             "conversation": self.conversation,
             "memories": self.memories,
-            "environment": self.environment.__dict__ if self.environment else None,
+            "environment": (self.environment.__dict__ if hasattr(self.environment, "__dict__") else self.environment) if self.environment else None,
             "observations": [o.__dict__ for o in self.observations],
             "available_tools": self.available_tools,
             "metadata": self.metadata,
