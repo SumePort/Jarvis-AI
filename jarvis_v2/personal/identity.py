@@ -118,3 +118,23 @@ class IdentityDataPaths:
     @property
     def memory(self) -> Path:
         return self.root / "memory.jsonl"
+
+    @property
+    def calendar(self) -> Path:
+        return self.root / "calendar.json"
+
+    @property
+    def reminders(self) -> Path:
+        return self.root / "reminders.json"
+
+    @property
+    def contacts(self) -> Path:
+        return self.root / "contacts.json"
+
+    @property
+    def messages(self) -> Path:
+        return self.root / "messages.json"
+
+    @property
+    def automations(self) -> Path:
+        return self.root / "automations.json"
