@@ -1,7 +1,7 @@
 """Bridge discovered capabilities into the action tool registry."""
 from __future__ import annotations
 from jarvis_v2.actions.planner import ActionPlanner
-from jarvis_v2.core.types import ToolSpec, ActionRisk
+from jarvis_v2.core.types import ToolSpec
 from .registry import CapabilityRegistry
 
 class CapabilityToolBridge:
@@ -11,11 +11,8 @@ class CapabilityToolBridge:
     def available_tools(self, specs: list[ToolSpec]) -> list[ToolSpec]:
         result=[]
         for spec in specs:
-            capability=spec.metadata.get("capability") if hasattr(spec, "metadata") else None
-            if capability and not self.capabilities.get(capability):
-                continue
-            status=self.capabilities.get(capability) if capability else None
-            if status is not None and not status.available:
+            required=spec.capabilities
+            if required and any((self.capabilities.get(c) is None or not self.capabilities.get(c).available) for c in required):
                 continue
             result.append(spec)
         return result
