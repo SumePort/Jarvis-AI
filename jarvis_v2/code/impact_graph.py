@@ -133,7 +133,7 @@ class CrossLayerImpactBuilder:
             base = (self.root / imported.replace(".", "/")).resolve()
         else:
             base = (self.root / imported).resolve()
-        candidates = [base, Path(str(base) + ".py"), Path(str(base) + ".ts"), Path(str(base) + ".tsx"),
+        candidates = [base, Path(str(base) + ".py"), Path(str(base) + ".js"), Path(str(base) + ".ts"), Path(str(base) + ".tsx"),
                       base / "__init__.py", base / "index.ts", base / "index.js"]
         for c in candidates:
             try:
