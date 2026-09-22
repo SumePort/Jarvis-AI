@@ -8,7 +8,7 @@ class SafeProjectExecutor:
     """Run only explicitly allowlisted development commands inside a project."""
 
     ALLOWED = (
-        "python ", "python3 ", "pytest", "pyright", "ruff ",
+        "python ", "python3 ", "pytest", "python -m compileall", "pyright", "ruff ",
         "git status", "git diff", "git log", "git branch",
         "flutter test", "flutter analyze", "dart test", "dart analyze",
         "npm test", "npm run test", "npm run lint",
