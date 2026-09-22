@@ -33,6 +33,8 @@ from jarvis_v2.environment.browser_playwright import PlaywrightBrowserProvider
 from jarvis_v2.environment.screenshot_provider import ScreenshotEnvironmentProvider
 from jarvis_v2.research.http_provider import HttpJsonResearchProvider
 from jarvis_v2.research.background import BackgroundResearchManager
+from jarvis_v2.research.browser_provider import BrowserResearchProvider
+from jarvis_v2.self_improvement.engine import SelfImprovementEngine
 
 
 def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntime, CapabilityRegistry]:
@@ -111,7 +113,10 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
             browser_session = None
 
     coding = CodingAgent(SafeProjectExecutor())
+    if browser.provider is not None and os.getenv("JARVIS_ENABLE_BROWSER_RESEARCH", "0") == "1":
+        research = ResearchPipeline(BrowserResearchProvider(browser))
     background_research = BackgroundResearchManager(research)
+    self_improvement = SelfImprovementEngine(os.getcwd(), SafeProjectExecutor())
 
     # Device identity/session layer used by DOOM.
     device_sessions = DeviceSessionManager()
@@ -140,6 +145,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "device_sessions": device_sessions,
         "doom_sessions": doom_sessions,
         "coding": coding,
+        "self_improvement": self_improvement,
         "browser_session": browser_session,
         "capabilities": CapabilityStatusReporter().report(
             browser=browser.provider,
