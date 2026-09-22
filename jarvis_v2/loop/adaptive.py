@@ -48,7 +48,10 @@ class AdaptiveAgentLoop:
             )
             actions = self.executor.execute(current, confirmed=confirmed)
             result.actions.extend(actions)
-            state = observer()
+            state = dict(observer())
+            for action in actions:
+                if isinstance(action.output, dict):
+                    state.update(action.output)
             result.observations.append(state)
             verification = verifier(current, actions, state)
             result.verifications.append(verification)
