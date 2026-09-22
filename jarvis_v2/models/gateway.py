@@ -73,16 +73,25 @@ def llama_cpp_client(base_url: str = "http://127.0.0.1:8080/v1",
     endpoint = base_url.rstrip("/") + "/chat/completions"
 
     def complete(prompt: str) -> str:
+        raw_mode = prompt.startswith("[JARVIS_RAW]")
+        raw_json = prompt.startswith("[JARVIS_RAW_JSON]")
+        system = (
+            "You are JARVIS. Return ONLY valid JSON matching the requested action-plan "
+            "schema. Never invent tools. Follow tool risk and data class constraints."
+        )
+        if raw_mode:
+            system = (
+                "You are JARVIS. Answer the user's requested synthesis directly. "
+                "Do not invent facts. Preserve uncertainty and source provenance."
+            )
+        elif raw_json:
+            system = (
+                "You are JARVIS. Return ONLY valid JSON matching the schema requested "
+                "by the user. Do not add markdown fences or commentary."
+            )
         payload = {
             "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are JARVIS. Return ONLY valid JSON matching the requested "
-                        "action-plan schema. Never invent tools. Follow tool risk and data "
-                        "class constraints."
-                    ),
-                },
+                {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.1,
