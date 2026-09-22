@@ -35,10 +35,11 @@ class SelfImprovementOrchestrator:
     Ordinary self-improvement cannot edit security boundaries or promote code.
     """
 
-    def __init__(self, engine: SelfImprovementEngine, brain=None,
+    def __init__(self, engine: SelfImprovementEngine, brain=None, text_model=None,
                  research=None, learning_store=None):
         self.engine = engine
         self.brain = brain
+        self.text_model = text_model
         self.research = research
         self.learning_store = learning_store
 
@@ -53,8 +54,8 @@ class SelfImprovementOrchestrator:
                 raise PermissionError(f"Protected self-improvement path: {normalized}")
 
     def _plan_from_model(self, request: ImprovementRequest, evidence: str) -> ImprovementPlan:
-        if self.brain is None:
-            raise RuntimeError("No model brain configured for self-improvement planning")
+        if self.text_model is None:
+            raise RuntimeError("No text model configured for self-improvement planning")
         prompt = (
             "Create a JSON self-improvement plan for JARVIS. "
             "Only propose files that need compatibility changes. "
@@ -64,8 +65,8 @@ class SelfImprovementOrchestrator:
             f"Goal: {request.goal}\nTechnology: {request.technology}\n"
             f"Research evidence:\n{evidence[:18000]}"
         )
-        raw = self.brain.respond(prompt)
-        data = json.loads(raw) if isinstance(raw, str) else raw
+        raw = self.text_model("[JARVIS_RAW_JSON]\n" + prompt)
+        data = json.loads(raw)
         files = [str(x) for x in data.get("files", [])]
         tests = [str(x) for x in data.get("tests", [])]
         self._validate_paths(files)
