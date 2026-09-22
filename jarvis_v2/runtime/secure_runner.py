@@ -61,8 +61,13 @@ class SecureRunner:
                 execution=self.loop.run(plan, confirmed=confirmed)
             else:
                 execution=self.loop.run(plan)
-            self.tracer.execution(identity, request, execution.verification)
-            return SecureRunResult(execution.verification.success, False, execution.verification.message, execution)
+            verification = getattr(execution, "verification", None)
+            if verification is not None:
+                self.tracer.execution(identity, request, verification)
+                return SecureRunResult(verification.success, False, verification.message, execution)
+            success = bool(getattr(execution, "success", False))
+            message = str(getattr(execution, "message", "Execution completed." if success else "Execution failed."))
+            return SecureRunResult(success, False, message, execution)
         except Exception as exc:
             self.tracer.error(identity, request, exc)
             raise
