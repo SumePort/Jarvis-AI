@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
+import ast
 
 
 @dataclass(frozen=True)
@@ -112,7 +113,17 @@ class CrossLayerImpactBuilder:
     @staticmethod
     def _imports(path: Path, text: str) -> list[str]:
         if path.suffix == ".py":
-            return re.findall(r"^\s*(?:from|import)\s+([A-Za-z_][\w.]*)", text, re.M)
+            try:
+                tree = ast.parse(text)
+                imports = []
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Import):
+                        imports.extend(alias.name for alias in node.names)
+                    elif isinstance(node, ast.ImportFrom) and node.module:
+                        imports.append(node.module)
+                return imports
+            except SyntaxError:
+                return re.findall(r"^\s*(?:from|import)\s+([A-Za-z_][\w.]*)", text, re.M)
         return re.findall(r"""(?:from|import)\s+["']([^"']+)["']""", text)
 
     def _resolve_import(self, source: Path, imported: str) -> str:
