@@ -38,5 +38,5 @@ class PersonalMemory:
             if record.id==memory_id:
                 record.metadata["forgotten"]=True; record.updated_at=time.time(); found=True
         if not found: return False
-        self.store.path.write_text("".join(__import__("json").dumps(r.__dict__,ensure_ascii=False)+"\\n" for r in records),encoding="utf-8")
+        self.store.path.write_text("".join(__import__("json").dumps(r.__dict__,ensure_ascii=False)+"\n" for r in records),encoding="utf-8")
         return True
