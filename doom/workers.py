@@ -15,6 +15,11 @@ class Worker:
     type: WorkerType
     capabilities: set[str] = field(default_factory=set)
     online: bool = True
+    endpoint: str | None = None
+    region: str | None = None
+    def __post_init__(self) -> None:
+        if self.endpoint and not (self.endpoint.startswith("http://") or self.endpoint.startswith("https://")):
+            raise ValueError("Worker endpoint must use http:// or https://.")
     @property
     def trusted_local(self) -> bool:
         return self.type == WorkerType.LOCAL
@@ -25,6 +30,7 @@ class TaskRequest:
     required_capability: str
     data_class: DataClass = DataClass.NORMAL
     explicitly_authorized: bool = False
+    preferred_worker_type: WorkerType | None = None
 
 class ResourcePolicyError(PermissionError):
     pass
@@ -43,4 +49,10 @@ class ResourceManager:
             if local is None:
                 raise ResourcePolicyError("Protected data is local-only and cannot be routed to a remote worker.")
             return local
-        return candidates[0]
+        if task.preferred_worker_type is not None:
+            preferred = [w for w in candidates if w.type == task.preferred_worker_type]
+            if preferred:
+                return preferred[0]
+        # Default preference keeps compute close to the user before using remote capacity.
+        order = {WorkerType.LOCAL: 0, WorkerType.PRIVATE: 1, WorkerType.CLOUD: 2}
+        return sorted(candidates, key=lambda w: order[w.type])[0]
