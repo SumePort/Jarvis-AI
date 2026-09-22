@@ -17,25 +17,44 @@ sensitive secrets inside a PC-local encrypted vault.
 5. Protected data cannot be routed to a remote worker without explicit authorization.
 6. Cloud providers are replaceable workers, not DOOM itself.
 
-## Initial commands
-
-Run: python -m doom init
-
-Run: python -m doom status
-
-This first implementation establishes the contracts that must not change later:
-data classification, the protected-vault boundary, and resource routing.
-Worker execution, distributed workspace storage, device clients, and JARVIS
-integration will build on these contracts.
-
 ## Phase 2 — Control Plane
 
 The control plane coordinates DOOM devices and workers.
 
 DOOM Client -> Control Plane -> Worker Registry -> Scheduler -> Worker
 
-The initial server binds to 127.0.0.1:8787 by default. Device enrollment issues a device token; the control plane stores only a SHA-256 token hash. Remote exposure is deliberately not enabled yet. Secure transport and explicit device enrollment must be added before exposing the control plane to a LAN or the Internet.
+The initial server binds to 127.0.0.1:8787 by default. Device enrollment issues
+a device token; the control plane stores only a SHA-256 token hash. Remote
+exposure is deliberately not enabled yet. Secure transport and explicit device
+enrollment must be added before exposing the control plane to a LAN or Internet.
 
 Run locally: python -m doom.control
 
-The current API supports health, device enrollment, worker registration, worker listing, and policy-aware task planning. It does not execute remote tasks yet.
+The current API supports health, device enrollment, worker registration, worker
+listing, and policy-aware task planning. It does not execute remote tasks yet.
+
+## Phase 3 — Distributed Workspace
+
+Phase 3 adds persistent, provider-neutral project storage:
+
+DOOM Client -> Workspace Manifest -> Object Store
+
+A workspace manifest records each file by SHA-256 content address, size, path,
+and DOOM data classification. The object-store interface is provider-neutral,
+so local storage is only the first backend; future private servers, Oracle,
+S3-compatible storage, or other providers can implement the same contract.
+
+NORMAL project files may be synchronized. PROTECTED files are rejected by the
+workspace sync layer and remain outside distributed storage. The protected vault
+is a separate PC-local security boundary.
+
+### Initialize a workspace
+
+python -m doom workspace init my-project data/doom/workspaces/my-project
+
+This creates:
+
+data/doom/workspaces/my-project/.doom/manifest.json
+
+Phase 3 does not expose storage to the Internet and does not yet implement
+multi-device conflict resolution. Those are later phases.
