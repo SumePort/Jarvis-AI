@@ -67,6 +67,10 @@ class CrossLayerImpactBuilder:
             text = self._read(path)
             for imported in self._imports(path, text):
                 target_rel = self._resolve_import(path, imported)
+                # Deterministic fallback for local modules when filesystem
+                # resolution is unable to represent the module directly.
+                if target_rel not in file_ids:
+                    target_rel = self._match_local_module(imported, file_ids)
                 if target_rel in file_ids:
                     graph.add_edge(ImpactEdge(source, "imports", file_ids[target_rel]))
 
@@ -147,6 +151,17 @@ class CrossLayerImpactBuilder:
                 return c.relative_to(self.root).as_posix() if c.is_file() else ""
             except ValueError:
                 continue
+        return ""
+
+    @staticmethod
+    def _match_local_module(imported: str, file_ids: dict[str, str]) -> str:
+        module = imported.lstrip(".").replace(".", "/").strip("/")
+        if not module:
+            return ""
+        for rel in file_ids:
+            stem = Path(rel).with_suffix("").as_posix()
+            if stem == module or stem.endswith("/" + module):
+                return rel
         return ""
 
     @staticmethod
