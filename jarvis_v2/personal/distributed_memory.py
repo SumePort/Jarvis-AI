@@ -51,7 +51,7 @@ class DistributedMemoryStore:
         payload["metadata"] = dict(payload.get("metadata", {}))
         payload["metadata"].setdefault("identity_id", self.identity_id)
         version = MemoryVersion(str(uuid.uuid4()), record.id, self.identity_id, self.device_id,
-                                operation, payload, base_version)
+                                operation, payload, base_version=base_version)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(asdict(version), ensure_ascii=False) + "\n")
         return version
