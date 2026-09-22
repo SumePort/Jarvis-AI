@@ -6,6 +6,7 @@ from .registry import ToolRegistry
 from .adapters import LocalAdapters
 from .windows import WindowsAdapters, windows_tool_specs
 from .system import SystemAdapters
+from .trusted_input import TrustedInputHandoff, trusted_input_specs
 
 
 class RuntimeToolRegistry:
@@ -32,6 +33,14 @@ class RuntimeToolRegistry:
             for spec in windows_tool_specs():
                 handler = getattr(windows, spec.name)
                 registry.register(spec, handler)
+
+            trusted_input = TrustedInputHandoff()
+            for spec in trusted_input_specs():
+                registry.register(spec, getattr(trusted_input, {
+                    "request_user_sensitive_input": "request_user_input",
+                    "resume_after_user_sensitive_input": "resume_after_user_input",
+                    "cancel_user_sensitive_input": "cancel_user_input",
+                }[spec.name]))
 
         system = SystemAdapters()
         for spec in system.windows_tool_specs():
