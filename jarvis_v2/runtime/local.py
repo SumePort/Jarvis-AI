@@ -41,6 +41,10 @@ from jarvis_v2.imagination.engine import ImaginationEngine
 from jarvis_v2.imagination.experiment_log import ExperimentLog
 from jarvis_v2.simulation.sandbox import MentalSandbox
 from jarvis_v2.simulation.mental_model import MentalModelBuilder
+from jarvis_v2.simulation.advanced import NumericalSimulator
+from jarvis_v2.inventor.loop import InventorLoop
+from doom.mesh.mesh import DoomMesh
+from doom.provisioning import Provisioner
 
 
 def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntime, CapabilityRegistry]:
@@ -148,6 +152,14 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     mental_model_builder = MentalModelBuilder(
         text_model=lambda prompt: gateway.complete("local-llama", prompt)
     )
+    numerical_simulator = NumericalSimulator()
+    inventor_loop = InventorLoop(
+        imagination=imagination,
+        sandbox=mental_sandbox,
+        model_builder=mental_model_builder,
+    )
+    doom_mesh = DoomMesh()
+    provisioner = Provisioner()
 
     # Device identity/session layer used by DOOM.
     device_sessions = DeviceSessionManager()
@@ -183,6 +195,10 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "experiment_log": experiment_log,
         "mental_sandbox": mental_sandbox,
         "mental_model_builder": mental_model_builder,
+        "numerical_simulator": numerical_simulator,
+        "inventor_loop": inventor_loop,
+        "doom_mesh": doom_mesh,
+        "provisioner": provisioner,
         "browser_session": browser_session,
         "capabilities": CapabilityStatusReporter().report(
             browser=browser.provider,
