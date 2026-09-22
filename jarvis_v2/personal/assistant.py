@@ -7,6 +7,7 @@ from jarvis_v2.brain.provider import BrainProvider
 from jarvis_v2.personal.conversation import JarvisConversation, ConversationResult
 from jarvis_v2.personal.identity import IdentityStore
 from jarvis_v2.personal.planner import PersonalPlanner
+from jarvis_v2.personal.daily_planner import DailyPlanner
 
 
 @dataclass
@@ -33,6 +34,11 @@ class PersonalAssistant:
 
     def logout(self):
         self.conversation.logout()
+
+    def build_daily_plan(self):
+        if not self.conversation.session.authenticated:
+            raise PermissionError("JARVIS session is not authenticated")
+        return DailyPlanner(self.conversation.personal.profile, self.conversation.personal.tasks, self._calendar()).build()
 
     def handle(self, text: str) -> AssistantResult:
         if not self.conversation.session.authenticated:
