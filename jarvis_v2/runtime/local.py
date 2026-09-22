@@ -25,6 +25,10 @@ from jarvis_v2.environment.browser_runtime import BrowserRuntime
 from jarvis_v2.perception.vision import VisionService
 from jarvis_v2.research.pipeline import ResearchPipeline
 from jarvis_v2.code.agent import CodingAgent
+from jarvis_v2.code.safe_executor import SafeProjectExecutor
+from jarvis_v2.perception.tesseract import TesseractVisionProvider
+from jarvis_v2.environment.playwright_session import PlaywrightSessionFactory
+from jarvis_v2.environment.browser_playwright import PlaywrightBrowserProvider
 
 
 def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntime, CapabilityRegistry]:
@@ -68,13 +72,30 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     vision = VisionService()
     research = ResearchPipeline()
 
+    # Opt-in local providers. They are activated only when their dependencies
+    # are installed and the corresponding environment flags are enabled.
+    if os.getenv("JARVIS_ENABLE_OCR", "0") == "1":
+        try:
+            vision = VisionService(TesseractVisionProvider())
+        except Exception:
+            pass
+
+    browser_session = None
+    if os.getenv("JARVIS_ENABLE_PLAYWRIGHT", "0") == "1":
+        try:
+            browser_session = PlaywrightSessionFactory(
+                headless=os.getenv("JARVIS_BROWSER_HEADLESS", "0") == "1"
+            )
+            page = browser_session.start()
+            browser = BrowserRuntime(PlaywrightBrowserProvider(page))
+        except Exception:
+            browser_session = None
+
+    coding = CodingAgent(SafeProjectExecutor())
+
     # Device identity/session layer used by DOOM.
     device_sessions = DeviceSessionManager()
     doom_sessions = DoomSessionBridge(device_sessions)
-
-    # Project coding orchestration is available once a project executor is
-    # attached by the host application.
-    coding = CodingAgent()
 
     # Keep these objects attached to the runtime as explicit services. This
     # gives the host application one composition root without leaking secrets
@@ -98,6 +119,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "device_sessions": device_sessions,
         "doom_sessions": doom_sessions,
         "coding": coding,
+        "browser_session": browser_session,
         "capabilities": CapabilityStatusReporter().report(
             browser=browser.provider,
             vision=vision.provider,
