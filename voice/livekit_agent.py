@@ -54,14 +54,26 @@ class JarvisV2VoiceAgent(Agent):
         print(f"[USER] {text}", flush=True)
 
         try:
-            # First give the normal PersonalAssistant conversation path a chance.
-            # Action requests are then handled by the full V2 runtime.
-            personal = self.assistant.handle(text)
-            if personal.mode == "conversation" and personal.conversation:
-                response = personal.conversation.response
+            # Deterministic personal actions (tasks/reminders/contacts/etc.) are
+            # handled by PersonalAssistant. Everything else enters the full V2
+            # runtime so computer actions can be planned/executed.
+            personal_plan = self.assistant.planner.plan(text)
+            if personal_plan.intent != "conversation":
+                personal = self.assistant.handle(text)
+                response = self._personal_response(personal)
             else:
                 result = self.runtime.run(text)
-                response = self._runtime_response(result)
+                execution = getattr(result, "execution", None)
+                plan = getattr(execution, "plan", None) if execution else None
+                steps = getattr(plan, "steps", []) if plan else []
+
+                if steps:
+                    response = self._runtime_response(result)
+                else:
+                    # No executable action: use the persistent V2 conversation
+                    # memory and local brain for a natural conversational reply.
+                    conversation = self.assistant.conversation.handle(text)
+                    response = conversation.response
         except PermissionError as exc:
             response = str(exc)
         except Exception as exc:
@@ -77,6 +89,28 @@ class JarvisV2VoiceAgent(Agent):
         # JARVIS V2 generated the response. Do not let a second session LLM
         # answer the same turn.
         raise StopResponse()
+
+    @staticmethod
+    def _personal_response(result) -> str:
+        if result.mode == "conversation" and result.conversation:
+            return result.conversation.response
+        plan = result.plan or {}
+        intent = plan.get("intent", "")
+        if intent == "create_task":
+            tasks = plan.get("tasks", [])
+            return f"Done. I've added {tasks[0].get('title', 'the task')} to your tasks." if tasks else "Done."
+        if intent == "create_reminder":
+            return "Done. I've created the reminder."
+        if intent == "create_event":
+            return "Done. I've added the event to your calendar."
+        if intent == "create_contact":
+            return "Done. I've saved the contact."
+        if intent == "list_contacts":
+            contacts = plan.get("contacts", [])
+            return "You have no saved contacts." if not contacts else "Your contacts are: " + "; ".join(c.get("name", "unnamed") for c in contacts[:5])
+        if intent == "prepare_message":
+            return "I've prepared the message. I won't send it without the required confirmation."
+        return "Done."
 
     @staticmethod
     def _runtime_response(result) -> str:
