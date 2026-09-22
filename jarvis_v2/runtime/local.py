@@ -185,6 +185,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     # remain local and feed the same authenticated PersonalAssistant used by
     # the text runtime.
     voice_agent = None
+    voice_error = None
     if os.getenv("JARVIS_ENABLE_VOICE", "0") == "1":
         try:
             voice = build_local_voice(
@@ -213,10 +214,11 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
                 authenticate=authenticate_voice,
                 doom_sessions=doom_sessions,
             )
-        except Exception:
+        except Exception as exc:
             # Voice is optional; the rest of JARVIS remains usable when audio
             # dependencies, microphone, Vosk model, or Piper are unavailable.
             voice_agent = None
+            voice_error = f"{type(exc).__name__}: {exc}"
 
     # Keep these objects attached to the runtime as explicit services. This
     # gives the host application one composition root without leaking secrets
@@ -241,6 +243,7 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "device_sessions": device_sessions,
         "doom_sessions": doom_sessions,
         "voice_agent": voice_agent,
+        "voice_error": voice_error,
         "coding": coding,
         "self_improvement": self_improvement,
         "self_improvement_orchestrator": self_improvement_orchestrator,
