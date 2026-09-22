@@ -31,6 +31,11 @@ class ToolSpec:
     risk: ActionRisk = ActionRisk.CONFIRM
     data_class: DataClass = DataClass.NORMAL
 
+    def __post_init__(self) -> None:
+        # Backward-compatible shorthand: ToolSpec(name, description, ActionRisk).
+        if isinstance(self.parameters, ActionRisk):
+            object.__setattr__(self, "risk", self.parameters)
+            object.__setattr__(self, "parameters", {})
 
 @dataclass(frozen=True)
 class ToolCall:
