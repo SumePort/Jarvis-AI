@@ -12,8 +12,6 @@ class ToolRegistry:
         self.specs[spec.name] = spec
         self.handlers[spec.name] = handler
 
-    def handlers(self) -> dict:
-        return dict(self.handlers)
 
     def executor(self) -> ActionExecutor:
         return ActionExecutor(dict(self.handlers))
