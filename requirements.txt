@@ -20,3 +20,6 @@ livekit-agents[openai]~=1.5
 # Optional Piper environment:
 # PIPER_EXE=...
 # PIPER_MODEL=...
+
+# DOOM protected vault
+cryptography>=44,<46
