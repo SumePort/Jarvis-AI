@@ -13,6 +13,16 @@ from jarvis_v2.loop.controller import Verification
 from jarvis_v2.loop.environment_loop import EnvironmentAgentLoop
 
 
+class _BrainReplanner:
+    def __init__(self, brain: ActionPlannerBrain, planner: ActionPlanner):
+        self.brain = brain
+        self.planner = planner
+
+    def replan(self, goal: str, observations: list[dict[str, Any]], previous: ActionPlan) -> ActionPlan:
+        context = {"goal": goal, "previous_plan": previous.goal, "observations": observations[-4:]}
+        return self.planner.from_brain(self.brain, goal, context)
+
+
 @dataclass
 class JarvisAgentResult:
     request: str
@@ -52,6 +62,11 @@ class JarvisAgentRuntime:
                 "knowledge": decision.rationale,
                 "relevant_nodes": decision.relevant_nodes,
                 "data_class": data_class.value,
+                "available_tools": [
+                    {"name": spec.name, "description": spec.description, "risk": spec.risk.value,
+                     "data_class": spec.data_class.value}
+                    for spec in self.planner.tools.values()
+                ],
             })
         else:
             plan = self.planner.validate(plan)
@@ -63,6 +78,8 @@ class JarvisAgentRuntime:
                                      reason="Environment observer is required for agent execution")
         verifier = verifier or self._default_verifier
         loop = EnvironmentAgentLoop(self.planner, self.executor, self.environment_observer, self.max_iterations)
+        if replanner is None and self.brain is not None:
+            replanner = _BrainReplanner(self.brain, self.planner)
         execution = loop.run(plan, verifier, replanner, confirmed)
         return JarvisAgentResult(request, decision.relevant_nodes, decision.rationale, execution=execution)
 
