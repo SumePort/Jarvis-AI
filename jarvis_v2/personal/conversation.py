@@ -108,10 +108,12 @@ class JarvisConversation:
         text = text.strip()
         if not text:
             raise ValueError("Conversation input cannot be empty")
-        user_turn = ConversationTurn("user", text)
-        self.turns.append(user_turn)
+        # Context represents the conversation state before the current request is added.
+        # This keeps the prompt/history stable and avoids duplicating the in-flight turn.
         self.extractor.extract(text)
         context = self._context(text)
+        user_turn = ConversationTurn("user", text)
+        self.turns.append(user_turn)
         language = self.language_policy.choose(text)
         context["language"] = {"code": language.language, "confidence": language.confidence, "instruction": self.language_policy.instruction(language)}
         response: BrainResponse = self.brain.respond(text, context, [])
