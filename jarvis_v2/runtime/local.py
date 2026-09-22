@@ -37,6 +37,8 @@ from jarvis_v2.research.browser_provider import BrowserResearchProvider
 from jarvis_v2.self_improvement.engine import SelfImprovementEngine
 from jarvis_v2.self_improvement.orchestrator import SelfImprovementOrchestrator
 from jarvis_v2.knowledge.learning_store import LearningStore
+from jarvis_v2.imagination.engine import ImaginationEngine
+from jarvis_v2.imagination.experiment_log import ExperimentLog
 
 
 def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntime, CapabilityRegistry]:
@@ -136,6 +138,10 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         research=research,
         learning_store=learning_store,
     )
+    imagination = ImaginationEngine(
+        text_model=lambda prompt: gateway.complete("local-llama", prompt)
+    )
+    experiment_log = ExperimentLog()
 
     # Device identity/session layer used by DOOM.
     device_sessions = DeviceSessionManager()
@@ -167,6 +173,8 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "self_improvement": self_improvement,
         "self_improvement_orchestrator": self_improvement_orchestrator,
         "learning_store": learning_store,
+        "imagination": imagination,
+        "experiment_log": experiment_log,
         "browser_session": browser_session,
         "capabilities": CapabilityStatusReporter().report(
             browser=browser.provider,
