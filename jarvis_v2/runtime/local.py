@@ -43,6 +43,12 @@ from jarvis_v2.simulation.sandbox import MentalSandbox
 from jarvis_v2.simulation.mental_model import MentalModelBuilder
 from jarvis_v2.simulation.advanced import NumericalSimulator
 from jarvis_v2.inventor.loop import InventorLoop
+from jarvis_v2.inventor.persistence import InventionJournal
+from jarvis_v2.experiments.controller import ExperimentController
+from jarvis_v2.experiments.scheduler import ExperimentScheduler
+from jarvis_v2.perception.tracking import ObjectTracker
+from jarvis_v2.simulation.physics import PhysicsSimulator
+from doom.provisioning.adapters import NoopProvisioner
 from doom.mesh.mesh import DoomMesh
 from doom.provisioning import Provisioner
 
@@ -155,11 +161,17 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
     numerical_simulator = NumericalSimulator()
     inventor_loop = InventorLoop(
         imagination=imagination,
+        research=research,
         sandbox=mental_sandbox,
         model_builder=mental_model_builder,
     )
+    invention_journal = InventionJournal()
+    experiment_controller = ExperimentController()
+    experiment_scheduler = ExperimentScheduler(experiment_controller)
+    object_tracker = ObjectTracker()
+    physics_simulator = PhysicsSimulator()
     doom_mesh = DoomMesh()
-    provisioner = Provisioner()
+    provisioner = Provisioner(NoopProvisioner())
 
     # Device identity/session layer used by DOOM.
     device_sessions = DeviceSessionManager()
@@ -199,6 +211,11 @@ def build_local_runtime(model_url: str | None = None) -> tuple[JarvisAgentRuntim
         "inventor_loop": inventor_loop,
         "doom_mesh": doom_mesh,
         "provisioner": provisioner,
+        "invention_journal": invention_journal,
+        "experiment_controller": experiment_controller,
+        "experiment_scheduler": experiment_scheduler,
+        "object_tracker": object_tracker,
+        "physics_simulator": physics_simulator,
         "browser_session": browser_session,
         "capabilities": CapabilityStatusReporter().report(
             browser=browser.provider,
