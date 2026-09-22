@@ -75,7 +75,7 @@ class PersonalPlanner:
                 remind_at = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
                 if remind_at <= now:
                     remind_at += timedelta(days=1)
-                reminder_text = body[:time_match.start()].strip()
+                reminder_text = text[len("remind me to "):len("remind me to ") + time_match.start()].strip()
                 reminder = self.reminders.add(reminder_text, remind_at.isoformat())
                 return PersonalPlan("create_reminder", reminders=[reminder], explanation="Created a timed reminder.")
 
