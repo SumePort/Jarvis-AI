@@ -6,6 +6,7 @@ memory and DOOM sessions.
 """
 from __future__ import annotations
 
+import asyncio
 import os
 
 from dotenv import load_dotenv
@@ -28,7 +29,10 @@ STT_MODEL = os.getenv("LIVEKIT_STT_MODEL", "deepgram/nova-3")
 STT_LANGUAGE = os.getenv("LIVEKIT_STT_LANGUAGE", "en")
 TTS_MODEL = os.getenv("LIVEKIT_TTS_MODEL", "inworld/inworld-tts-2")
 TTS_VOICE = os.getenv("LIVEKIT_TTS_VOICE", "Ashley")
-LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", os.getenv("JARVIS_MODEL_URL", "http://127.0.0.1:8080/v1"))
+LOCAL_LLM_URL = os.getenv(
+    "LOCAL_LLM_URL",
+    os.getenv("JARVIS_MODEL_URL", "http://127.0.0.1:8080/v1"),
+)
 LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "local-model")
 
 
@@ -44,15 +48,8 @@ class JarvisV2VoiceAgent(Agent):
             )
         )
 
-    async def on_user_turn_completed(
-        self, turn_ctx: ChatContext, new_message: ChatMessage
-    ) -> None:
-        text = (new_message.text_content or "").strip()
-        if not text:
-            raise StopResponse()
-
-        print(f"[USER] {text}", flush=True)
-
+    def _handle_user_text(self, text: str) -> str:
+        """Run synchronous JARVIS V2 work away from LiveKit's event loop."""
         try:
             # Deterministic personal actions (tasks/reminders/contacts/etc.) are
             # handled by PersonalAssistant. Everything else enters the full V2
@@ -80,7 +77,22 @@ class JarvisV2VoiceAgent(Agent):
             print(f"[JARVIS ERROR] {type(exc).__name__}: {exc}", flush=True)
             response = "I ran into an error while handling that request."
 
-        response = " ".join(str(response or "").split()).strip()
+        return " ".join(str(response or "").split()).strip()
+
+    async def on_user_turn_completed(
+        self, turn_ctx: ChatContext, new_message: ChatMessage
+    ) -> None:
+        text = (new_message.text_content or "").strip()
+        if not text:
+            raise StopResponse()
+
+        print(f"[USER] {text}", flush=True)
+
+        # Runtime planning, local-model calls, filesystem work and UI actions
+        # are synchronous in the existing V2 stack. Never run them directly on
+        # LiveKit's realtime event loop or they can delay audio/turn handling.
+        response = await asyncio.to_thread(self._handle_user_text, text)
+
         print(f"[JARVIS] {response}", flush=True)
 
         if response:
@@ -98,7 +110,11 @@ class JarvisV2VoiceAgent(Agent):
         intent = plan.get("intent", "")
         if intent == "create_task":
             tasks = plan.get("tasks", [])
-            return f"Done. I've added {tasks[0].get('title', 'the task')} to your tasks." if tasks else "Done."
+            return (
+                f"Done. I've added {tasks[0].get('title', 'the task')} to your tasks."
+                if tasks
+                else "Done."
+            )
         if intent == "create_reminder":
             return "Done. I've created the reminder."
         if intent == "create_event":
@@ -107,9 +123,17 @@ class JarvisV2VoiceAgent(Agent):
             return "Done. I've saved the contact."
         if intent == "list_contacts":
             contacts = plan.get("contacts", [])
-            return "You have no saved contacts." if not contacts else "Your contacts are: " + "; ".join(c.get("name", "unnamed") for c in contacts[:5])
+            return (
+                "You have no saved contacts."
+                if not contacts
+                else "Your contacts are: "
+                + "; ".join(c.get("name", "unnamed") for c in contacts[:5])
+            )
         if intent == "prepare_message":
-            return "I've prepared the message. I won't send it without the required confirmation."
+            return (
+                "I've prepared the message. I won't send it without the required "
+                "confirmation."
+            )
         return "Done."
 
     @staticmethod
@@ -121,7 +145,6 @@ class JarvisV2VoiceAgent(Agent):
         if execution is None:
             return "I couldn't complete that request."
 
-        # EnvironmentAgentLoop exposes the executed plan and verification.
         plan = getattr(execution, "plan", None)
         steps = getattr(plan, "steps", []) if plan else []
         if not steps:
@@ -140,13 +163,15 @@ class JarvisV2VoiceAgent(Agent):
 
         return "Done."
 
+
 server = AgentServer()
 
 
 @server.rtc_session(agent_name=AGENT_NAME)
 async def jarvis_voice(ctx: agents.JobContext):
-    # Use the exact same V2 composition root as the desktop runtime.
-    runtime, _ = build_local_runtime(LOCAL_LLM_URL)
+    # Runtime construction is synchronous and can initialize many providers.
+    # Keep it off the LiveKit worker event loop as well.
+    runtime, _ = await asyncio.to_thread(build_local_runtime, LOCAL_LLM_URL)
 
     # Authenticate the local assistant session for this trusted voice client.
     assistant = PersonalAssistant(runtime.services["brain"])
