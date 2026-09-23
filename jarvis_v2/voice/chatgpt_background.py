@@ -366,3 +366,57 @@ def build_background_bridge(
         ),
         action_handler=action_handler,
     )
+
+
+def main() -> None:
+    from jarvis_v2.runtime.local import build_local_runtime
+
+    print("=" * 64)
+    print("JARVIS — BACKGROUND CHATGPT VOICE")
+    print("=" * 64)
+    print("ChatGPT is the voice/conversation layer.")
+    print("JARVIS V2 remains the local computer-control layer.")
+    print("The ChatGPT browser window will be minimized.")
+    print("Temporary Chat is required by default.")
+    print("=" * 64)
+
+    runtime, _ = build_local_runtime()
+    bridge = build_background_bridge(
+        action_handler=lambda command: _run_jarvis_action(runtime, command)
+    )
+    try:
+        bridge.start(wait_for_login=True)
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nStopping background voice...", flush=True)
+    finally:
+        bridge.stop()
+
+
+def _run_jarvis_action(runtime, command: str) -> str:
+    result = runtime.run(command)
+    if getattr(result, "blocked", False):
+        return getattr(result, "reason", "") or "JARVIS blocked that action."
+
+    execution = getattr(result, "execution", None)
+    if execution is None:
+        return "JARVIS could not execute that request."
+
+    user_message = getattr(execution, "user_message", None)
+    if user_message:
+        return str(user_message)
+
+    state = getattr(execution, "state", None)
+    if getattr(state, "value", str(state)) == "waiting_for_user":
+        return "JARVIS needs you to complete the required confirmation on screen."
+
+    verification = getattr(execution, "verification", None)
+    if verification is not None and not getattr(verification, "success", False):
+        return getattr(verification, "message", "") or "The action did not complete."
+
+    return "Done."
+
+
+if __name__ == "__main__":
+    main()
