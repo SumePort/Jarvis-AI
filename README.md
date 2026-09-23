@@ -147,6 +147,22 @@ The default STT is `deepgram/nova-3` and the default TTS is `inworld/inworld-tts
 
 Important: LiveKit improves realtime transport, endpointing/turn detection and interruption handling; transcription accuracy still depends heavily on the selected STT model.
 
+## Optional background ChatGPT Voice
+
+If you want ChatGPT to provide the natural voice conversation while JARVIS V2
+continues to control Windows locally, use the optional background bridge:
+
+    pip install playwright
+    playwright install chromium
+    python -m jarvis_v2.voice.chatgpt_background
+
+The bridge uses a separate persistent Chromium profile, prefers Temporary Chat,
+grants microphone permission, and minimizes the ChatGPT window. Computer
+actions are routed back through the existing JARVIS V2 security/runtime layer.
+
+This is a UI bridge rather than an official ChatGPT API integration, so it may
+need maintenance if the ChatGPT web UI changes. See docs/CHATGPT_BACKGROUND.md.
+
 ## Text mode
 
 The existing text interface remains available:
