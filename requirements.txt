@@ -9,7 +9,8 @@ pyperclip>=1.9,<2
 pytest>=8,<9
 
 # LiveKit realtime voice
-livekit-agents[openai]~=1.5
+# Keep aligned with the current LiveKit Agents API used by voice/livekit_agent.py.
+livekit-agents[openai]~=1.8
 
 # Optional legacy local voice / OCR
 # sounddevice
