@@ -46,7 +46,7 @@ LiveKit is the realtime voice transport/orchestration layer. It does not replace
 
 ## LiveKit voice setup
 
-The LiveKit Agents framework supports realtime voice sessions with STT, LLM/TTS pipelines, turn detection and interruptions. The current implementation keeps the Jarvis brain local while using LiveKit for the voice layer.
+The repository currently targets **LiveKit Agents 1.8.x**. The Python `voice.livekit_agent` module defines the `AgentServer` and JARVIS V2 voice session. LiveKit's current CLI is the recommended way to start it; the legacy `python -m voice.livekit_agent dev` command is deprecated.
 
 ### 1. Install the LiveKit CLI
 
@@ -54,6 +54,12 @@ On Windows:
 
 ```powershell
 winget install LiveKit.LiveKitCLI
+```
+
+If it is already installed, update it before development:
+
+```powershell
+lk --version
 ```
 
 ### 2. Create/link a LiveKit project
@@ -64,7 +70,7 @@ Create a LiveKit Cloud project, then authenticate the CLI:
 lk cloud auth
 ```
 
-The LiveKit quickstart uses a free Cloud project for development and provides the project credentials needed by the agent. A self-hosted LiveKit server can also be used.
+A self-hosted LiveKit server can also be used.
 
 ### 3. Install Python dependencies
 
@@ -102,26 +108,44 @@ llama-server -m "E:\\ULTRON\\models\\llm\\qwen2.5-0.5b-instruct-q4_k_m.gguf" --h
 
 ### 6. Start the LiveKit voice agent
 
-In a second PowerShell:
+Use the current LiveKit CLI and explicitly point it at the JARVIS entrypoint:
 
 ```powershell
 .\\.venv\\Scripts\\Activate.ps1
-python -m voice.livekit_agent
+lk agent dev voice/livekit_agent.py
 ```
 
-For LiveKit development mode, the CLI can also run the agent:
+For production-style local startup without development reload:
 
 ```powershell
-lk agent dev
+lk agent start voice/livekit_agent.py
 ```
 
-Then open the LiveKit Agent Console and start a session with the `jarvis` agent.
+The old command below is intentionally not recommended because the Python CLI is deprecated:
+
+```powershell
+python -m voice.livekit_agent dev
+```
+
+### 7. Connect a voice client
+
+With the agent running, join the LiveKit project using the Agent Console or another LiveKit client and target the `jarvis` agent.
+
+The session provides:
+
+- streaming microphone audio
+- LiveKit audio turn detection
+- interruption handling
+- Deepgram STT by default
+- JARVIS V2 as the authoritative reasoning/action layer
+- local `llama-server` as the JARVIS brain
+- Inworld TTS by default
 
 ## Voice model choice
 
 The default STT is `deepgram/nova-3` and the default TTS is `inworld/inworld-tts-2` through LiveKit Inference. Change `LIVEKIT_STT_MODEL`, `LIVEKIT_TTS_MODEL`, and `LIVEKIT_TTS_VOICE` in `.env` to use other supported models.
 
-Important: LiveKit improves the realtime transport, endpointing/turn detection and interruption experience; transcription accuracy still depends heavily on the selected STT model.
+Important: LiveKit improves realtime transport, endpointing/turn detection and interruption handling; transcription accuracy still depends heavily on the selected STT model.
 
 ## Text mode
 
@@ -161,4 +185,4 @@ The local password is a session gate. It is not a security boundary against some
 
 ## Branch
 
-`refactor/v1-local-first` is the active refactor branch. `main` remains separate until the branch is verified locally.
+`feature/jarvis-v2-foundation` contains the current JARVIS V2 foundation and realtime voice work. `main` remains separate until the branch is verified locally.
